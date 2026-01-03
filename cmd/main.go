@@ -2,6 +2,7 @@ package main
 
 import (
 	"erp-2c/config"
+	"erp-2c/store/pg"
 	"fmt"
 	"log"
 	"os"
@@ -13,7 +14,11 @@ func main() {
 	loadENV()
 	cfg := config.Get()
 	_ = cfg
-
+	db, err := pg.Dial()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	_ = db
 }
 
 func loadENV() {
