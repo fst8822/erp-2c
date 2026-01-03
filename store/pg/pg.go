@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 type DB struct {
@@ -51,5 +52,8 @@ func checkDBFieldsReturnPgUrl(cfg *config.Config) (string, error) {
 	if cfg.SSLMode == "" {
 		return "", fmt.Errorf("wrong config field %s, sslmode name is empty, op=%s", cfg.SSLMode, op)
 	}
-	return "", nil
+	pgURL := fmt.Sprintf(
+		"host=%s port=%s user=%s database=%s password=%s sslmode=%s",
+		cfg.HostDB, cfg.PortDB, cfg.DBUser, cfg.DBName, cfg.DBPassword, cfg.SSLMode)
+	return pgURL, nil
 }
