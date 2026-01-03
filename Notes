@@ -1,1 +1,27 @@
 "github.com/kelseyhightower/envconfig"
+
+godotenv
+gotenv
+
+Чтобы читать файл .env
+Способ 1: Загрузить .env через библиотеку godotenv
+go get github.com/joho/godotenv
+Фрагмент коды:
+type Config struct {
+    Port  int  `envconfig:"PORT"`
+    Debug bool `envconfig:"DEBUG"`
+}
+
+func main() {
+    // Загружаем .env → в переменные окружения
+    err := godotenv.Load()
+    if err != nil {
+        log.Println("⚠️ .env файл не найден")
+    }
+
+    // Читаем окружение через envconfig
+    var cfg Config
+    envconfig.Process("", &cfg)
+
+    log.Println(cfg.Port, cfg.Debug)
+}
