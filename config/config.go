@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -21,17 +22,21 @@ type Config struct {
 
 var (
 	conf Config
+	once sync.Once
 )
 
 func Get() *Config {
-	err := envconfig.Process("", &conf)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-	configBytes, err := json.MarshalIndent(conf, "", "    ")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	fmt.Println("Configuration", string(configBytes))
+	once.Do(func() {
+		err := envconfig.Process("", &conf)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		configBytes, err := json.MarshalIndent(conf, "", "    ")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		fmt.Println("Configuration", string(configBytes))
+
+	})
 	return &conf
 }
