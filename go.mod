@@ -4,7 +4,11 @@ go 1.24.0
 
 toolchain go1.24.10
 
-require github.com/jmoiron/sqlx v1.4.0
+require (
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/joho/godotenv v1.5.1
+	github.com/kelseyhightower/envconfig v1.4.0
+)
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
@@ -19,8 +23,6 @@ require (
 	github.com/go-playground/validator/v10 v10.30.1 // indirect
 	github.com/ilyakaznacheev/cleanenv v1.5.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
