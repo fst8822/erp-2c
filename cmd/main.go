@@ -2,15 +2,15 @@ package main
 
 import (
 	"erp-2c/config"
+	"erp-2c/controller/router"
 	"erp-2c/store/pg"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -23,21 +23,17 @@ func main() {
 	}
 	_ = db
 
-	router := chi.NewRouter()
-	router.Use(middleware.RequestID)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.URLFormat)
+	r := router.New(nil)
 
 	slog.Info("Start server", slog.String("address", cfg.HTTPAddress))
 	srv := &http.Server{
 		Addr:         cfg.HTTPAddress,
-		Handler:      router,
+		Handler:      r,
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,
 		IdleTimeout:  cfg.IdleTimeout,
 	}
-	if err := srv.ListenAndServe(); err != nil {
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("Failed to start server", slog.String("error", err.Error()))
 	}
 }
