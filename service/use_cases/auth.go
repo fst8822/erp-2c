@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,11 +21,11 @@ func (a AuthService) SignUp() {
 	//TODO implement me
 	panic("implement me")
 }
-
 func (a AuthService) SignIn() {
 	//TODO implement me
 	panic("implement me")
 }
+func (a AuthService) GetAuthenticatedUserFromContext(c *chi.Context) {}
 
 func generatePasswordHash(password string) (string, error) {
 	const op = "service.use.generatePasswordHash"
