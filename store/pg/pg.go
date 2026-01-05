@@ -9,7 +9,7 @@ import (
 )
 
 type DB struct {
-	DB *sqlx.DB
+	Pg *sqlx.DB
 }
 
 func Dial() (*DB, error) {
