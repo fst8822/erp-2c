@@ -17,6 +17,4 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
-
-}
+func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {}

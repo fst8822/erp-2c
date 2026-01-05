@@ -1,7 +1,7 @@
 package service
 
 import (
-	usercase "erp-2c/service/user-case"
+	usercase "erp-2c/service/use_cases"
 	"erp-2c/store"
 )
 

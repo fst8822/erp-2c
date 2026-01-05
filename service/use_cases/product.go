@@ -1,4 +1,4 @@
-package user_case
+package use_cases
 
 import "erp-2c/store"
 
