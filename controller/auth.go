@@ -2,6 +2,7 @@ package controller
 
 import (
 	"erp-2c/service"
+	"log/slog"
 	"net/http"
 )
 
@@ -14,7 +15,15 @@ func NewAuthController(services *service.Manager) *AuthController {
 }
 
 func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Post request SignUp")
 
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("SignUp"))
 }
 
-func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {}
+func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Post request SignIn")
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("SignUp"))
+}
