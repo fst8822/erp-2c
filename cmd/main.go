@@ -3,6 +3,8 @@ package main
 import (
 	"erp-2c/config"
 	"erp-2c/controller/router"
+	"erp-2c/service"
+	store "erp-2c/store"
 	"erp-2c/store/pg"
 	"errors"
 	"fmt"
@@ -16,14 +18,21 @@ import (
 
 func main() {
 	loadENV()
+
 	cfg := config.Get()
+
 	db, err := pg.Dial()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	_ = db
 
-	r := router.New(nil)
+	storeRepo := store.NewStore(db.Pg)
+	serviceManager, err := service.NewManager(storeRepo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r := router.New(serviceManager)
 
 	slog.Info("Start server", slog.String("address", cfg.HTTPAddress))
 	srv := &http.Server{
