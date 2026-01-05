@@ -19,6 +19,10 @@ func (p ProductService) GetById() {
 	//TODO implement me
 	panic("implement me")
 }
+func (p ProductService) GetByName() {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (p ProductService) GetAll() {
 	//TODO implement me
