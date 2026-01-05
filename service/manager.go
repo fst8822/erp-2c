@@ -3,6 +3,7 @@ package service
 import (
 	usercase "erp-2c/service/use_cases"
 	"erp-2c/store"
+	"fmt"
 )
 
 type Manager struct {
@@ -10,9 +11,12 @@ type Manager struct {
 	ProductService ProductService
 }
 
-func NewManager(store *store.Store) *Manager {
-	return &Manager{
-		UserService:    usercase.NewUserService(store),
-		ProductService: usercase.NewProductService(store),
+func NewManager(storeRepo *store.Store) (*Manager, error) {
+	if storeRepo == nil {
+		return nil, fmt.Errorf("no store provided")
 	}
+	return &Manager{
+		UserService:    usercase.NewUserService(storeRepo),
+		ProductService: usercase.NewProductService(storeRepo),
+	}, nil
 }
