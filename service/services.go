@@ -2,14 +2,11 @@ package service
 
 import (
 	"erp-2c/model"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type AuthService interface {
-	SignUp(UserToSave model.User) string
-	SignIn(login string, password string) string
-	GetAuthenticatedUserFromContext(c *chi.Context) *model.User
+	SignUp(UserToSave model.User) (string, error)
+	SignIn(login string, password string) (string, error)
 }
 
 type UserService interface {
