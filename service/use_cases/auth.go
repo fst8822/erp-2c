@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,16 +17,13 @@ func NewAuthService(store *store.Store) *AuthService {
 	return &AuthService{store: store}
 }
 
-func (a *AuthService) SignUp(UserToSave model.User) string {
+func (a *AuthService) SignUp(UserToSave model.User) (string, error) {
 	//TODO implement me
 	panic("implement me")
 }
-func (a *AuthService) SignIn(login string, password string) string {
+func (a *AuthService) SignIn(login string, password string) (string, error) {
 	//TODO implement me
 	panic("implement me")
-}
-func (a *AuthService) GetAuthenticatedUserFromContext(c *chi.Context) *model.User {
-	return nil
 }
 
 func generatePasswordHash(password string) (string, error) {
