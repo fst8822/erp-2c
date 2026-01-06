@@ -1,6 +1,7 @@
 package use_cases
 
 import (
+	"erp-2c/model"
 	"erp-2c/store"
 	"fmt"
 	"log/slog"
@@ -17,15 +18,17 @@ func NewAuthService(store *store.Store) *AuthService {
 	return &AuthService{store: store}
 }
 
-func (a AuthService) SignUp() {
+func (a *AuthService) SignUp(UserToSave model.User) string {
 	//TODO implement me
 	panic("implement me")
 }
-func (a AuthService) SignIn() {
+func (a *AuthService) SignIn(login string, password string) string {
 	//TODO implement me
 	panic("implement me")
 }
-func (a AuthService) GetAuthenticatedUserFromContext(c *chi.Context) {}
+func (a *AuthService) GetAuthenticatedUserFromContext(c *chi.Context) *model.User {
+	return nil
+}
 
 func generatePasswordHash(password string) (string, error) {
 	const op = "service.use.generatePasswordHash"
