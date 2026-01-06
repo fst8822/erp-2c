@@ -2,7 +2,7 @@ package main
 
 import (
 	"erp-2c/config"
-	"erp-2c/controller/router"
+	"erp-2c/controller/routers"
 	"erp-2c/service"
 	store "erp-2c/store"
 	"erp-2c/store/pg"
@@ -32,7 +32,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r := router.New(serviceManager)
+	r := routers.New(serviceManager)
 
 	slog.Info("Start server", slog.String("address", cfg.HTTPAddress))
 	srv := &http.Server{
