@@ -9,6 +9,7 @@ import (
 type Manager struct {
 	UserService    UserService
 	ProductService ProductService
+	AuthService    AuthService
 }
 
 func NewManager(storeRepo *store.Store) (*Manager, error) {
@@ -18,5 +19,6 @@ func NewManager(storeRepo *store.Store) (*Manager, error) {
 	return &Manager{
 		UserService:    usercase.NewUserService(storeRepo),
 		ProductService: usercase.NewProductService(storeRepo),
+		AuthService:    usercase.NewAuthService(storeRepo),
 	}, nil
 }
