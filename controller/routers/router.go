@@ -1,4 +1,4 @@
-package router
+package routers
 
 import (
 	"erp-2c/controller"
@@ -29,9 +29,9 @@ func New(serviceManager *service.Manager) http.Handler {
 		})
 
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.BasicAuth("user-are", map[string]string{
-				"admin": "admin",
-			}))
+			//r.Use(middleware.BasicAuth("user-are", map[string]string{
+			//	"admin": "admin",
+			//}))
 
 			r.Route("/user", func(r chi.Router) {
 
