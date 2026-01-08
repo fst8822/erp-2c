@@ -11,8 +11,8 @@ type Product struct {
 
 type ProductDB struct {
 	ID           int64  `db:"id"`
-	ProductName  string `db:"product-name"`
-	ProductGroup string `db:"product-group"`
+	ProductName  string `db:"product_name"`
+	ProductGroup string `db:"product_group"`
 	Image        byte   `db:"image"`
 	Stock        int64  `db:"stock"`
 	Price        int64  `db:"price"`
