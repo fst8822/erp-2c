@@ -14,17 +14,17 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (u UserRepository) Save(userToSave model.User) (model.UserDB, error) {
-	//TODO implement me
-	panic("implement me")
+func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
+
+	u.db.Query("INSERT INTO ")
+	userToSave.ID = 1
+	return &userToSave, nil
 }
 
-func (u UserRepository) GetById(userId int) (model.UserDB, error) {
-	//TODO implement me
-	panic("implement me")
+func (u *UserRepository) GetById(userId int) (*model.UserDB, error) {
+	return &model.UserDB{}, nil
 }
 
-func (u UserRepository) GetByName(userName string) (model.UserDB, error) {
-	//TODO implement me
-	panic("implement me")
+func (u *UserRepository) GetByLogin(login string) (*model.UserDB, error) {
+	return &model.UserDB{}, nil
 }
