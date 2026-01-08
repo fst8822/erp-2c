@@ -2,14 +2,15 @@ package routers
 
 import (
 	"erp-2c/controller"
-	"erp-2c/service"
+	middleware2 "erp-2c/security/middleware"
+	"erp-2c/service/use_cases"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func New(serviceManager *service.Manager) http.Handler {
+func New(serviceManager *use_cases.Manager) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -29,9 +30,7 @@ func New(serviceManager *service.Manager) http.Handler {
 		})
 
 		r.Group(func(r chi.Router) {
-			//r.Use(middleware.BasicAuth("user-are", map[string]string{
-			//	"admin": "admin",
-			//}))
+			r.Use(middleware2.JwtMiddleware)
 
 			r.Route("/user", func(r chi.Router) {
 
