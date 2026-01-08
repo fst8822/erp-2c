@@ -3,7 +3,6 @@ package store
 import (
 	"erp-2c/store/pg"
 	"fmt"
-
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,10 +12,8 @@ type Store struct {
 }
 
 func NewStore(db *sqlx.DB) (*Store, error) {
-	if db != nil {
-		if err := RunPgMigrations(); err != nil {
-			return nil, fmt.Errorf("runPgMigrations failed", err)
-		}
+	if err := RunPgMigrations(db); err != nil {
+		return nil, fmt.Errorf("runPgMigrations failed %w", err)
 	}
 	store := &Store{
 		UserRepo:    pg.NewUserRepository(db),
