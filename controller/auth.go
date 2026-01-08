@@ -1,28 +1,46 @@
 package controller
 
 import (
-	"erp-2c/service"
-	"log/slog"
+	"erp-2c/dto/response"
+	"erp-2c/model"
+	"erp-2c/service/use_cases"
 	"net/http"
+
+	"github.com/go-chi/render"
 )
 
 type AuthController struct {
-	services *service.Manager
+	services *use_cases.Manager
 }
 
-func NewAuthController(services *service.Manager) *AuthController {
+func NewAuthController(services *use_cases.Manager) *AuthController {
 	return &AuthController{services: services}
 }
 
 func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Post request SignUp")
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("SignUp"))
+	var request model.User
+
+	err := render.DecodeJSON(r.Body, &request)
+	if err != nil {
+		resp := response.BadRequest("Invalid json decode", r.Body)
+		render.Status(r, resp.Code)
+		render.JSON(w, r, resp)
+		return
+	}
+
+	saved, err := a.services.AuthService.SignUp(request)
+	if err != nil {
+		resp := response.InternalServerError("Failed to save user")
+		render.Status(r, resp.Code)
+		render.JSON(w, r, resp)
+		return
+	}
+	render.Status(r, http.StatusCreated)
+	render.JSON(w, r, response.Created("Success", saved))
 }
 
 func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Post request SignIn")
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("SignUp"))

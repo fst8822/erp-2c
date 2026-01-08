@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"erp-2c/model"
+	"erp-2c/service"
 	"erp-2c/store"
 	"fmt"
 	"log/slog"
@@ -10,20 +11,23 @@ import (
 )
 
 type AuthService struct {
-	store *store.Store
+	store       *store.Store
+	userService service.UserService
 }
 
-func NewAuthService(store *store.Store) *AuthService {
-	return &AuthService{store: store}
+func NewAuthService(store *store.Store, userService service.UserService) *AuthService {
+	return &AuthService{
+		store:       store,
+		userService: userService,
+	}
 }
 
-func (a *AuthService) SignUp(UserToSave model.User) (string, error) {
-	//TODO implement me
-	panic("implement me")
+func (a *AuthService) SignUp(userToSave model.User) (*model.User, error) {
+	return a.userService.Save(userToSave)
 }
+
 func (a *AuthService) SignIn(login string, password string) (string, error) {
-	//TODO implement me
-	panic("implement me")
+	return "", nil
 }
 
 func generatePasswordHash(password string) (string, error) {
