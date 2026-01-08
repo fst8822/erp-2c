@@ -12,8 +12,10 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/lib/pq v1.10.9
 	golang.org/x/crypto v0.46.0
 )
 
-require github.com/ajg/form v1.5.1 // indirect
+require (
+	github.com/ajg/form v1.5.1 // indirect
+	github.com/lib/pq v1.10.9 // indirect
+)

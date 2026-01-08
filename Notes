@@ -25,3 +25,7 @@ func main() {
 
     log.Println(cfg.Port, cfg.Debug)
 }
+
+
+migrate -path ./store/pg/migrations -database 'postgres://postgres:postgres@localhost:5435/erp2s?sslmode=disable' up
+go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
