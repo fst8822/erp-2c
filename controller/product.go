@@ -3,7 +3,7 @@ package controller
 import (
 	"erp-2c/dto/response"
 	"erp-2c/model"
-	"erp-2c/service"
+	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
 
@@ -11,10 +11,10 @@ import (
 )
 
 type ProductController struct {
-	services *service.Manager
+	services *use_cases.Manager
 }
 
-func NewProductController(services *service.Manager) *ProductController {
+func NewProductController(services *use_cases.Manager) *ProductController {
 	return &ProductController{services: services}
 }
 
@@ -23,7 +23,7 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 
 	var productToSave model.Product
 	if err := render.DecodeJSON(r.Body, &productToSave); err != nil {
-		response.Error(http.StatusBadRequest, err)
+		response.BadRequest("Invalid decode json", r.Body)
 		return
 	}
 	//saved, err := p.services.ProductService.Save(productToSave)

@@ -14,32 +14,26 @@ func NewProductRepository(db *sqlx.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
-func (p ProductRepository) Save(productToSave model.ProductDB) (model.ProductDB, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *ProductRepository) Save(productToSave model.ProductDB) (*model.ProductDB, error) {
+	return &model.ProductDB{}, nil
 }
 
-func (p ProductRepository) GetById(productId int) (model.ProductDB, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *ProductRepository) GetById(productId int) (*model.ProductDB, error) {
+	return &model.ProductDB{}, nil
 }
 
-func (p ProductRepository) GetByName(productName string) (model.ProductDB, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *ProductRepository) GetByName(productName string) (*model.ProductDB, error) {
+	return &model.ProductDB{}, nil
 }
 
-func (p ProductRepository) GetAll() ([]model.ProductDB, error) {
-	//TODO implement me
-	panic("implement me")
+func (p *ProductRepository) GetAll() (*[]model.ProductDB, error) {
+	return &[]model.ProductDB{}, nil
 }
 
-func (p ProductRepository) UpdateById(productId int) error {
-	//TODO implement me
-	panic("implement me")
+func (p *ProductRepository) UpdateById(productId int) error {
+	return nil
 }
 
-func (p ProductRepository) DeleteById(productId int) error {
-	//TODO implement me
-	panic("implement me")
+func (p *ProductRepository) DeleteById(productId int) error {
+	return nil
 }
