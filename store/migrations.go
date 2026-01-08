@@ -8,9 +8,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
-	"log"
 	"log/slog"
-	"os"
 )
 
 func RunPgMigrations(db *sqlx.DB) error {
@@ -27,10 +25,8 @@ func RunPgMigrations(db *sqlx.DB) error {
 	if err != nil {
 		return fmt.Errorf("postgres instance failed %w, op = %s", err, op)
 	}
-	cwd, _ := os.Getwd()
-	log.Println("cwd:", cwd)
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://./store/pg/migrations", "postgres", driver)
+		cfg.PGMigrationsPath, "postgres", driver)
 	if err != nil {
 		return err
 	}
