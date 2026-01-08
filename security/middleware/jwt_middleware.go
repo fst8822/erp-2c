@@ -1,19 +1,77 @@
 package middleware
 
 import (
-	"erp-2c/model"
+	"context"
+	"erp-2c/dto/response"
+	"erp-2c/security/jwt"
+	"fmt"
+	"net/http"
+	"strings"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
-func UserIdentity(user model.User) {
+type contextKey string
 
-}
+const (
+	authorization            = "Authorization"
+	bearer                   = "Bearer"
+	userIdKey     contextKey = "id"
+	userRole      contextKey = "role"
+)
 
-func GetUserFromContext(ctx *chi.Context) (*model.User, error) {
-	return nil, nil
-}
+func JwtMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get(authorization)
+		if auth == "" {
+			resp := response.Unauthorized(fmt.Sprintf("Missing  authorization header %s", auth))
+			render.Status(r, resp.Code)
+			render.JSON(w, r, resp)
+			return
+		}
 
-func addUserToContext(user model.User) {
+		parts := strings.Split(auth, " ")
+		if len(parts) != 2 || parts[0] != bearer {
+			resp := response.Unauthorized("Invalid  authorization header format")
+			render.Status(r, resp.Code)
+			render.JSON(w, r, resp)
+			return
+		}
 
+		token, err := jwt.ParseToken(parts[1])
+		if err != nil || !token.Valid {
+			resp := response.Unauthorized("Invalid token")
+			render.Status(r, resp.Code)
+			render.JSON(w, r, resp)
+			return
+		}
+
+		claims, ok := token.Claims.(*jwt.CustomClaims)
+		if !ok {
+			resp := response.Unauthorized("Invalid claims")
+			render.Status(r, resp.Code)
+			render.JSON(w, r, resp)
+			return
+		}
+
+		id, ok := jwt.GetUserIdFromClaims(claims)
+		if !ok {
+			resp := response.Unauthorized("Invalid token: user ID not found")
+			render.Status(r, resp.Code)
+			render.JSON(w, r, resp)
+			return
+		}
+		role, ok := jwt.GetRoleFromClaims(claims)
+		if !ok {
+			resp := response.Unauthorized("Invalid token: user role not found")
+			render.Status(r, resp.Code)
+			render.JSON(w, r, resp)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), userIdKey, id)
+		ctx = context.WithValue(ctx, userRole, role)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
