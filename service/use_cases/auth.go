@@ -23,16 +23,28 @@ func NewAuthService(store *store.Store, userService service.UserService) *AuthSe
 }
 
 func (a *AuthService) SignUp(userToSave model.User) (*model.User, error) {
+	//todo error needs to be handle, or use slog?
+	const op = "service.usescases.auth.SignUp"
+	slog.With("op", op)
+
+	passHash, err := generatePasswordHash(userToSave.Password)
+	//todo where to handle the error or use logging: 1. where i call method or in method which we call
+	if err != nil {
+		return nil, err
+	}
+	userToSave.Password = passHash
 	return a.userService.Save(userToSave)
 }
 
 func (a *AuthService) SignIn(login string, password string) (string, error) {
+	const op = "service.usescases.auth.SignIn"
+	slog.With("op", op)
 	return "", nil
 }
 
 func generatePasswordHash(password string) (string, error) {
-	const op = "service.use.generatePasswordHash"
-	slog.Info("Begin get hash password", slog.String("op", op))
+	const op = "service.usesacses.auth.generatePasswordHash"
+	slog.With("op", op)
 
 	b, err := bcrypt.GenerateFromPassword(
 		[]byte(password),
@@ -44,8 +56,8 @@ func generatePasswordHash(password string) (string, error) {
 	return string(b), err
 }
 func checkPassword(password string, hash string) bool {
-	const op = "service.use.checkPassword"
-	slog.Info("Begin check hash password", slog.String("op", op))
+	const op = "service.use.auth.checkPassword"
+	slog.With("op", op)
 
 	err := bcrypt.CompareHashAndPassword(
 		[]byte(hash),
