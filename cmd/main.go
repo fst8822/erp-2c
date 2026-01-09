@@ -42,6 +42,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	defer db.Pg.Close()
+
+	if err := store.RunPgMigrations(db.Pg); err != nil {
+		return err
+	}
 
 	storeRepo, err := store.NewStore(db.Pg)
 	if err != nil {
