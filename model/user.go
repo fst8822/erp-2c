@@ -2,11 +2,11 @@ package model
 
 type User struct {
 	ID        int64  `json:"ID"`
-	FirstName string `json:"first-name" validate:"required"`
+	FirstName string `json:"first_name" validate:"required"`
 	Email     string `json:"email" validate:"required"`
 	Login     string `json:"login" validate:"required"`
 	Password  string `json:"password" validate:"required"`
-	UserRole  string `json:"user-role,omitempty"`
+	UserRole  string `json:"user_role,omitempty"`
 }
 
 type UserDB struct {
