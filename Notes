@@ -79,8 +79,18 @@ func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
     return &userToSave, nil
 }
 
+rows, err := u.db.NamedQuery(query, userToSave)
+if err != nil {
+    // PostgreSQL unique constraint violation
+    if pqErr, ok := err.(*pq.Error); ok {
+        if pqErr.Code == "23505" { // unique_violation
+            return nil, fmt.Errorf("user with this email or login already exists: %w", err)
+        }
+    }
+    return nil, fmt.Errorf("failed to insert user: %w", err)
+}
 
-///
+////
 sync.OnceFunc(func() {
 		if err := RunPgMigrations(db); err != nil {
 			log.Fatalf("failed run migration %s", err.Error())
