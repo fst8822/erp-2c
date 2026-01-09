@@ -32,7 +32,7 @@ func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
 	rows, err := u.db.NamedQuery(query, userToSave)
 	if err != nil {
 		var pqErr *pq.Error
-		if errors.As(err, &pqErr) {
+		if errors.As(err, &pqErr) && pqErr.Code == constraintViolation {
 			return nil, fmt.Errorf("user with this email or login already exist: %w", err)
 		}
 		return nil, fmt.Errorf("failed to insert user: %w", err)
