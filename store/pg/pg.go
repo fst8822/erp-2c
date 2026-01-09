@@ -2,7 +2,9 @@ package pg
 
 import (
 	"erp-2c/config"
+	"erp-2c/lib/sl"
 	"fmt"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -17,11 +19,13 @@ func Dial() (*DB, error) {
 	cfg := config.Get()
 	pgURL, err := checkDBFieldsReturnPgUrl(cfg)
 	if err != nil {
+		slog.Error("failed to create pg url (dsn)", sl.Err(err))
 		return nil, err
 	}
 
 	db, err := sqlx.Connect(cfg.DriverName, pgURL)
 	if err != nil {
+		slog.Error("failed to connect BD", sl.Err(err))
 		return nil, fmt.Errorf("failed connect to db %w %s", err, op)
 	}
 	return &DB{db}, nil
