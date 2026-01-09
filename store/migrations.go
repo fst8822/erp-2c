@@ -2,6 +2,7 @@ package store
 
 import (
 	"erp-2c/config"
+	"erp-2c/lib/sl"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,19 +25,18 @@ func RunPgMigrations(db *sqlx.DB) error {
 
 	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
-		return fmt.Errorf("postgres instance failed %w, op = %s", err, op)
+		return fmt.Errorf("postgres instance failed op = %s, %w", op, err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
 		cfg.PGMigrationsPath, "postgres", driver)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to run migration op = %s, %w", op, err)
 	}
 
-	defer m.Close()
-
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("postgres instance failed %w, op = %s", err, op)
+		slog.Error("failed to run migration script", sl.Err(err))
+		return fmt.Errorf("failed to run migration op = %s, %w", op, err)
 	}
 	return nil
 }
