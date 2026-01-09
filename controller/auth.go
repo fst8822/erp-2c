@@ -2,8 +2,10 @@ package controller
 
 import (
 	"erp-2c/dto/response"
+	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -18,11 +20,15 @@ func NewAuthController(services *use_cases.Manager) *AuthController {
 }
 
 func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
+	const op = "control.routers.auth.SignUp"
+	slog.With("op", op)
 
 	var request model.User
 
 	err := render.DecodeJSON(r.Body, &request)
 	if err != nil {
+		slog.Error("Failed to decode request body", sl.Err(err))
+
 		resp := response.BadRequest("Invalid json decode", r.Body)
 		render.Status(r, resp.Code)
 		render.JSON(w, r, resp)
