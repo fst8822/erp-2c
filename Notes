@@ -29,3 +29,60 @@ func main() {
 
 migrate -path ./store/pg/migrations -database 'postgres://postgres:postgres@localhost:5435/erp2s?sslmode=disable' up
 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+
+фрагмент:
+func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
+	query := `
+        INSERT INTO users (first_name, email, login, password, user_role)
+        VALUES (:first_name, :email, :login, :password, :user_role)
+        RETURNING id`
+
+	err := u.db.QueryRow(query,
+		userToSave.FirstName,
+		userToSave.Email,
+		userToSave.Login,
+		userToSave.Password,
+		userToSave.UserRole,
+	).Scan(&userToSave.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userToSave, nil
+}
+
+
+func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
+    query := `
+        INSERT INTO users (first_name, email, login, password, user_role)
+        VALUES (:first_name, :email, :login, :password, :user_role)
+        RETURNING id`
+
+    rows, err := u.db.NamedQuery(query, userToSave)
+    if err != nil {
+        return nil, fmt.Errorf("failed to insert user: %w", err)
+    }
+    defer rows.Close()
+
+    if !rows.Next() {
+        if err := rows.Err(); err != nil {
+            return nil, fmt.Errorf("rows iteration error: %w", err)
+        }
+        return nil, fmt.Errorf("no ID returned after insert")
+    }
+
+    if err := rows.Scan(&userToSave.ID); err != nil {
+        return nil, fmt.Errorf("failed to scan user ID: %w", err)
+    }
+
+    return &userToSave, nil
+}
+
+
+///
+sync.OnceFunc(func() {
+		if err := RunPgMigrations(db); err != nil {
+			log.Fatalf("failed run migration %s", err.Error())
+		}
+	})
