@@ -17,8 +17,9 @@ import (
 )
 
 func main() {
-	err := run()
-	log.Fatal(err)
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func loadENV() {
@@ -39,16 +40,17 @@ func run() error {
 
 	db, err := pg.Dial()
 	if err != nil {
-		log.Fatalf(err.Error())
+		return err
 	}
 
 	storeRepo, err := store.NewStore(db.Pg)
 	if err != nil {
-		return fmt.Errorf("store.NewStore faild", err)
+		return err
 	}
+
 	serviceManager, err := use_cases.NewManager(storeRepo)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	r := routers.New(serviceManager)
@@ -61,8 +63,10 @@ func run() error {
 		WriteTimeout: cfg.WriteTimeout,
 		IdleTimeout:  cfg.IdleTimeout,
 	}
+	//todo add method for grace full shutdown
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("Failed to start server", slog.String("error", err.Error()))
+		return err
 	}
 	return nil
 }
