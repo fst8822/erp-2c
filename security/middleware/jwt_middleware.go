@@ -56,7 +56,7 @@ func JwtMiddleware(next http.Handler) http.Handler {
 
 		id, ok := jwt.GetUserIdFromClaims(claims)
 		if !ok {
-			resp := response.Unauthorized("Invalid token: user ID not found")
+			resp := response.Unauthorized("Invalid token: user Id not found")
 			render.Status(r, resp.Code)
 			render.JSON(w, r, resp)
 			return
