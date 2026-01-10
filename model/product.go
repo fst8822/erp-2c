@@ -1,7 +1,7 @@
 package model
 
 type Product struct {
-	ID           int64  `json:"id,omitempty"`
+	Id           int64  `json:"id,omitempty"`
 	ProductName  string `json:"product-name" validate:"required"`
 	ProductGroup string `json:"product-group,omitempty"`
 	Image        byte   `json:"image,omitempty"`
@@ -10,7 +10,7 @@ type Product struct {
 }
 
 type ProductDB struct {
-	ID           int64  `db:"id"`
+	Id           int64  `db:"id"`
 	ProductName  string `db:"product_name"`
 	ProductGroup string `db:"product_group"`
 	Image        byte   `db:"image"`
