@@ -1,7 +1,7 @@
 package model
 
 type User struct {
-	ID        int64  `json:"ID"`
+	Id        int64  `json:"id" validate:"required"`
 	FirstName string `json:"first_name" validate:"required"`
 	Email     string `json:"email" validate:"required"`
 	Login     string `json:"login" validate:"required"`
@@ -10,7 +10,7 @@ type User struct {
 }
 
 type UserDB struct {
-	ID        int64  `db:"ID"`
+	Id        int64  `db:"id"`
 	FirstName string `db:"first_name"`
 	Email     string `db:"email"`
 	Login     string `db:"login"`

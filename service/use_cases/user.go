@@ -35,13 +35,13 @@ func (u *UserService) Save(userToSave model.User) (*model.User, error) {
 	}
 
 	user := &model.User{
-		ID:        saved.ID,
+		Id:        saved.Id,
 		FirstName: saved.FirstName,
 		Email:     saved.Email,
 		Login:     saved.Login,
 		UserRole:  saved.UserRole,
 	}
-	slog.Info("User created", slog.Int64("id", userToSave.ID))
+	slog.Info("User created", slog.Int64("id", user.Id))
 	return user, nil
 }
 
@@ -49,12 +49,13 @@ func (u *UserService) GetById(userId int) (*model.User, error) {
 	const op = "service.usecase.user.GetById"
 	slog.With("op", op)
 
-	return nil, nil
-}
-
-func (u *UserService) GetByName(userName string) (*model.User, error) {
-	const op = "service.usecase.user.GetByName"
-	slog.With("op", op)
-
-	return nil, nil
+	found, err := u.store.UserRepo.GetById(userId)
+	user := &model.User{
+		Id:        found.Id,
+		FirstName: found.FirstName,
+		Email:     found.Email,
+		Login:     found.Login,
+		UserRole:  found.UserRole,
+	}
+	return user, err
 }

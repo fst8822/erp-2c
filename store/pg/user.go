@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"database/sql"
 	"erp-2c/model"
 	"errors"
 	"fmt"
@@ -14,8 +15,6 @@ type UserRepository struct {
 }
 
 const (
-	queryFields         = "first_name, email, login, password, user_role"
-	queryValues         = ":first_name, :email, :login, :password, :user_role"
 	constraintViolation = "23505"
 )
 
@@ -39,23 +38,22 @@ func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
 	}
 	defer rows.Close()
 
-	if !rows.Next() {
-		if err := rows.Err(); err != nil {
-			return nil, fmt.Errorf("rows iteration error: %w", err)
-		}
-		return nil, fmt.Errorf("no id returned after insert")
-	}
-
-	if err := rows.Scan(&userToSave.ID); err != nil {
-		return nil, fmt.Errorf("failed to scan user ID: %w", err)
+	rows.Next()
+	if err := rows.Scan(&userToSave.Id); err != nil {
+		return nil, fmt.Errorf("failed to scan user %w", err)
 	}
 	return &userToSave, nil
 }
 
 func (u *UserRepository) GetById(userId int) (*model.UserDB, error) {
-	return &model.UserDB{}, nil
-}
+	userDB := &model.UserDB{}
 
-func (u *UserRepository) GetByLogin(login string) (*model.UserDB, error) {
-	return &model.UserDB{}, nil
+	query := `SELECT * FROM users where id = $1`
+	if err := u.db.Get(userDB, query, userId); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user with id %d not found", userId)
+		}
+		return nil, fmt.Errorf("failed to get user %w", err)
+	}
+	return userDB, nil
 }

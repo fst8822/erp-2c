@@ -1,9 +1,14 @@
 package controller
 
 import (
+	"erp-2c/dto/response"
 	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
 type UserController struct {
@@ -17,27 +22,31 @@ func NewUserController(services *use_cases.Manager) *UserController {
 func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Get request GetById")
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Test"))
-}
+	idParam := chi.URLParam(r, "id")
+	userId, err := strconv.Atoi(idParam)
+	if err != nil {
+		resp := response.BadRequest("failed to parse path variable", idParam)
+		render.Status(r, resp.Code)
+		render.JSON(w, r, response.BadRequest("failed parse", idParam))
+		return
+	}
 
-func (c *UserController) GetByName(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Get request GetById")
+	found, _ := c.services.UserService.GetById(userId)
+	w.WriteHeader(http.StatusOK)
+	render.JSON(w, r, response.OK("successful", found))
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Test"))
 }
 
 func (c *UserController) UpdateById(w http.ResponseWriter, r *http.Request) {
 	slog.Info("PUT request UpdateById")
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Test"))
+	w.Write([]byte("Test2"))
 }
 
 func (c *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Delete request DeleteById")
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Test"))
+	w.Write([]byte("Test3"))
 }
