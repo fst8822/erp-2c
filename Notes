@@ -44,7 +44,7 @@ func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
 		userToSave.Login,
 		userToSave.Password,
 		userToSave.UserRole,
-	).Scan(&userToSave.ID)
+	).Scan(&userToSave.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -69,11 +69,11 @@ func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
         if err := rows.Err(); err != nil {
             return nil, fmt.Errorf("rows iteration error: %w", err)
         }
-        return nil, fmt.Errorf("no ID returned after insert")
+        return nil, fmt.Errorf("no Id returned after insert")
     }
 
-    if err := rows.Scan(&userToSave.ID); err != nil {
-        return nil, fmt.Errorf("failed to scan user ID: %w", err)
+    if err := rows.Scan(&userToSave.Id); err != nil {
+        return nil, fmt.Errorf("failed to scan user Id: %w", err)
     }
 
     return &userToSave, nil
