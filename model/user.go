@@ -1,17 +1,16 @@
 package model
 
 type SignUp struct {
-	Id        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	Email     string `json:"email"`
-	Login     string `json:"login"`
-	Password  string `json:"password,omitempty"`
-	UserRole  string `json:"user_role"`
+	FirstName string `json:"first_name" validate:"required"`
+	Email     string `json:"email" validate:"required"`
+	Login     string `json:"login" validate:"required"`
+	Password  string `json:"password,omitempty" validate:"required"`
+	UserRole  string `json:"user_role" validate:"required"`
 }
 
 type SignIn struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login    string `json:"login" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type UserDomain struct {

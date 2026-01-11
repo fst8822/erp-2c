@@ -1,11 +1,11 @@
 package model
 
 type ProductToSave struct {
-	ProductName  string `json:"product-name"`
-	ProductGroup string `json:"product-group"`
-	Image        byte   `json:"image"`
-	Stock        int64  `json:"stock"`
-	Price        int64  `json:"price"`
+	ProductName  string `json:"product-name" validate:"required"`
+	ProductGroup string `json:"product-group,omitempty"`
+	Image        byte   `json:"image,omitempty" validate:"omitempty"`
+	Stock        int64  `json:"stock,omitempty" validate:"omitempty"`
+	Price        int64  `json:"price,omitempty" validate:"omitempty"`
 }
 
 type ProductUpdate struct {
