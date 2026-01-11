@@ -15,9 +15,8 @@ func NewUserService(store *store.Store) *UserService {
 	return &UserService{store: store}
 }
 
-func (u *UserService) Save(userToSave model.User) (*model.User, error) {
+func (u *UserService) Save(userToSave model.SignUp) (*model.UserDomain, error) {
 	const op = "service.usecase.user.SAVE"
-	slog.With("op", op)
 
 	userDB := model.UserDB{
 		FirstName: userToSave.FirstName,
@@ -30,11 +29,11 @@ func (u *UserService) Save(userToSave model.User) (*model.User, error) {
 	//todo or handle err from u.store.UserRepo.Save (example )
 	saved, err := u.store.UserRepo.Save(userDB)
 	if err != nil {
-		slog.Error("Failed to save user", slog.String("OP", op), sl.Err(err))
+		slog.Error("Failed to save user", slog.String("login", userDB.Login), sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
-	user := &model.User{
+	user := model.UserDomain{
 		Id:        saved.Id,
 		FirstName: saved.FirstName,
 		Email:     saved.Email,
@@ -42,20 +41,42 @@ func (u *UserService) Save(userToSave model.User) (*model.User, error) {
 		UserRole:  saved.UserRole,
 	}
 	slog.Info("User created", slog.Int64("id", user.Id))
-	return user, nil
+	return &user, nil
 }
 
-func (u *UserService) GetById(userId int) (*model.User, error) {
+func (u *UserService) GetById(userId int64) (*model.UserDomain, error) {
 	const op = "service.usecase.user.GetById"
-	slog.With("op", op)
 
 	found, err := u.store.UserRepo.GetById(userId)
-	user := &model.User{
+	if err != nil {
+		slog.Error("failed to find user by id", slog.Int64("User id", userId), sl.ErrWithOP(err, op))
+		return nil, err
+	}
+	user := &model.UserDomain{
 		Id:        found.Id,
 		FirstName: found.FirstName,
 		Email:     found.Email,
 		Login:     found.Login,
 		UserRole:  found.UserRole,
 	}
-	return user, err
+	return user, nil
+}
+
+func (u *UserService) GetByLogin(userLogin string) (*model.UserDomain, error) {
+	const op = "service.usecase.user.GetById"
+
+	found, err := u.store.UserRepo.GetByLogin(userLogin)
+	if err != nil {
+		slog.Error("failed to find user by login", slog.String("User login", userLogin), sl.ErrWithOP(err, op))
+		return nil, err
+	}
+	user := model.UserDomain{
+		Id:        found.Id,
+		FirstName: found.FirstName,
+		Email:     found.Email,
+		Login:     found.Login,
+		Password:  found.Password,
+		UserRole:  found.UserRole,
+	}
+	return &user, nil
 }

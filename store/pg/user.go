@@ -45,13 +45,26 @@ func (u *UserRepository) Save(userToSave model.UserDB) (*model.UserDB, error) {
 	return &userToSave, nil
 }
 
-func (u *UserRepository) GetById(userId int) (*model.UserDB, error) {
+func (u *UserRepository) GetById(userId int64) (*model.UserDB, error) {
 	userDB := &model.UserDB{}
 
 	query := `SELECT * FROM users where id = $1`
 	if err := u.db.Get(userDB, query, userId); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user with id %d not found", userId)
+		}
+		return nil, fmt.Errorf("failed to get user %w", err)
+	}
+	return userDB, nil
+}
+
+func (u *UserRepository) GetByLogin(login string) (*model.UserDB, error) {
+	userDB := &model.UserDB{}
+
+	query := `SELECT * FROM users where login = $1`
+	if err := u.db.Get(userDB, query, login); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user with id %s not found", login)
 		}
 		return nil, fmt.Errorf("failed to get user %w", err)
 	}

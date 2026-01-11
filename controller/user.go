@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"erp-2c/dto/response"
+	"erp-2c/lib/response"
+	"erp-2c/model"
 	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
@@ -20,33 +21,43 @@ func NewUserController(services *use_cases.Manager) *UserController {
 }
 
 func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Get request GetById")
+	const op = "control.user.GetById"
+	slog.Info("Get request GetById", slog.String("op", op))
 
 	idParam := chi.URLParam(r, "id")
 	userId, err := strconv.Atoi(idParam)
 	if err != nil {
 		resp := response.BadRequest("failed to parse path variable", idParam)
 		render.Status(r, resp.Code)
-		render.JSON(w, r, response.BadRequest("failed parse", idParam))
+		render.JSON(w, r, resp)
 		return
 	}
 
-	found, _ := c.services.UserService.GetById(userId)
+	found, _ := c.services.UserService.GetById(int64(userId))
 	w.WriteHeader(http.StatusOK)
 	render.JSON(w, r, response.OK("successful", found))
-
 }
 
-func (c *UserController) UpdateById(w http.ResponseWriter, r *http.Request) {
-	slog.Info("PUT request UpdateById")
+func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
+	const op = "control.user.Save"
+	slog.Info("Post request Save", slog.String("op", op))
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Test2"))
-}
+	var userToSave model.SignUp
 
-func (c *UserController) DeleteById(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Delete request DeleteById")
-
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Test3"))
+	err := render.DecodeJSON(r.Body, &userToSave)
+	if err != nil {
+		resp := response.BadRequest("Invalid json decode body", r.Body)
+		render.Status(r, resp.Code)
+		render.JSON(w, r, resp)
+		return
+	}
+	saved, err := c.services.UserService.Save(userToSave)
+	if err != nil {
+		resp := response.InternalServerError("InternalServerError")
+		render.Status(r, resp.Code)
+		render.JSON(w, r, resp)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	render.JSON(w, r, response.OK("successful", saved))
 }
