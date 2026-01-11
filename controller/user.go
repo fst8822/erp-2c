@@ -4,7 +4,6 @@ import (
 	"erp-2c/lib/response"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -22,7 +21,6 @@ func NewUserController(services *use_cases.Manager) *UserController {
 
 func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.user.GetById"
-	slog.Info("Get request GetById", slog.String("op", op))
 
 	idParam := chi.URLParam(r, "id")
 	userId, err := strconv.Atoi(idParam)
@@ -40,7 +38,6 @@ func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {
 
 func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
 	const op = "control.user.Save"
-	slog.Info("Post request Save", slog.String("op", op))
 
 	var userToSave model.SignUp
 
@@ -58,6 +55,6 @@ func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, resp)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	render.Status(r, http.StatusOK)
 	render.JSON(w, r, response.OK("successful", saved))
 }
