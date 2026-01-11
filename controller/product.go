@@ -4,7 +4,6 @@ import (
 	"erp-2c/lib/response"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -22,7 +21,6 @@ func NewProductController(services *use_cases.Manager) *ProductController {
 
 func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.Save"
-	slog.Info("Post request Save", slog.String("op", op))
 
 	var productToSave model.ProductToSave
 	if err := render.DecodeJSON(r.Body, &productToSave); err != nil {
