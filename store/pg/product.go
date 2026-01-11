@@ -18,8 +18,8 @@ func NewProductRepository(db *sqlx.DB) *ProductRepository {
 }
 
 func (p *ProductRepository) Save(productToSave model.ProductDB) (*model.ProductDB, error) {
-	query := `INSERT INTO products (id, product_name, product_group, image,  stock, price) 
-			  VALUES (:id, :product_name, :product_group, :image,  :stock, :price) RETURNING *`
+	query := `INSERT INTO products (product_name, product_group, image,  stock, price) 
+			  VALUES (:product_name, :product_group, :image,  :stock, :price) RETURNING *`
 
 	rows, err := p.db.NamedQuery(query, productToSave)
 	if err != nil {
@@ -36,7 +36,7 @@ func (p *ProductRepository) Save(productToSave model.ProductDB) (*model.ProductD
 	return productDB, nil
 }
 
-func (p *ProductRepository) GetById(productId int) (*model.ProductDB, error) {
+func (p *ProductRepository) GetById(productId int64) (*model.ProductDB, error) {
 	productDB := &model.ProductDB{}
 
 	query := `SELECT * FROM products WHERE id = $1`
@@ -73,11 +73,11 @@ func (p *ProductRepository) GetAll() ([]model.ProductDB, error) {
 	return products, nil
 }
 
-func (p *ProductRepository) UpdateById(productId int, productToUpdate model.ProductDB) error {
+func (p *ProductRepository) UpdateById(productId int64, productToUpdate model.ProductDB) error {
 	return nil
 }
 
-func (p *ProductRepository) DeleteById(productId int) error {
+func (p *ProductRepository) DeleteById(productId int64) error {
 	query := `DELETE FROM products WHERE id = $1 RETURNING id`
 
 	var deletedId int

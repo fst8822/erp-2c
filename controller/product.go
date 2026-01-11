@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"erp-2c/dto/response"
+	"erp-2c/lib/response"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
 	"log/slog"
@@ -19,14 +19,24 @@ func NewProductController(services *use_cases.Manager) *ProductController {
 }
 
 func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Post request Save")
+	const op = "control.product.Save"
+	slog.Info("Post request Save", slog.String("op", op))
 
-	var productToSave model.Product
+	var productToSave model.ProductToSave
 	if err := render.DecodeJSON(r.Body, &productToSave); err != nil {
-		response.BadRequest("Invalid decode json", r.Body)
+		resp := response.BadRequest("Invalid json decode body", r.Body)
+		render.Status(r, resp.Code)
+		render.JSON(w, r, resp)
 		return
 	}
-	//saved, err := p.services.ProductService.Save(productToSave)
+	saved, err := p.services.ProductService.Save(productToSave)
+	if err != nil {
+		resp := response.InternalServerError("InternalServerError")
+		render.Status(r, resp.Code)
+		render.JSON(w, r, resp)
+		return
+	}
+	render.JSON(w, r, saved)
 }
 
 func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
