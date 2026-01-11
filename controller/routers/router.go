@@ -2,6 +2,7 @@ package routers
 
 import (
 	"erp-2c/controller"
+	"erp-2c/security"
 	"erp-2c/service/use_cases"
 	"net/http"
 
@@ -29,13 +30,11 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 		})
 
 		r.Group(func(r chi.Router) {
-			//r.Use(middleware2.JwtMiddleware)
+			r.Use(security.JwtMiddleware)
 
 			r.Route("/user", func(r chi.Router) {
-
 				r.Get("/{id}", userController.GetById)
-				r.Put("/{id}", userController.UpdateById)
-				r.Delete("/{id}", userController.DeleteById)
+				r.Put("/{id}", userController.Save)
 			})
 
 			r.Route("/product", func(r chi.Router) {
