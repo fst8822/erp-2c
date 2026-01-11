@@ -2,7 +2,7 @@ package model
 
 type ProductToSave struct {
 	ProductName  string `json:"product-name" validate:"required"`
-	ProductGroup string `json:"product-group,omitempty"`
+	ProductGroup string `json:"product-group,omitempty" validate:"omitempty"`
 	Image        byte   `json:"image,omitempty" validate:"omitempty"`
 	Stock        int64  `json:"stock,omitempty" validate:"omitempty"`
 	Price        int64  `json:"price,omitempty" validate:"omitempty"`
