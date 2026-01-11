@@ -1,9 +1,12 @@
 package use_cases
 
 import (
+	"erp-2c/lib/sl"
 	"erp-2c/model"
+	"erp-2c/security"
 	"erp-2c/service"
 	"erp-2c/store"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -22,29 +25,49 @@ func NewAuthService(store *store.Store, userService service.UserService) *AuthSe
 	}
 }
 
-func (a *AuthService) SignUp(userToSave model.User) (*model.User, error) {
+func (a *AuthService) SignUp(signUp model.SignUp) (*model.UserDomain, error) {
 	//todo error needs to be handle, or use slog?
 	const op = "service.usescases.auth.SignUp"
-	slog.With("op", op)
 
-	passHash, err := generatePasswordHash(userToSave.Password)
+	passHash, err := generatePasswordHash(signUp.Password)
 	//todo where to handle the error or use logging: 1. where i call method or in method which we call
 	if err != nil {
-		return nil, err
+		slog.Error("failed generate password hash", slog.String("login", signUp.Login), sl.ErrWithOP(err, op))
+
+		return nil, fmt.Errorf("user login %s, %w", signUp.Login, err)
 	}
-	userToSave.Password = passHash
-	return a.userService.Save(userToSave)
+	signUp.Password = passHash
+
+	saved, err := a.userService.Save(signUp)
+	if err != nil {
+		slog.Error("failed to get jwt token", signUp.Login,
+			slog.String("login", signUp.Login), sl.ErrWithOP(err, op))
+
+		return nil, fmt.Errorf("failed to save user with login %s, %w", signUp.Login, err)
+	}
+	return saved, nil
 }
 
-func (a *AuthService) SignIn(login string, password string) (string, error) {
-	const op = "service.usescases.auth.SignIn"
-	slog.With("op", op)
-	return "", nil
+func (a *AuthService) SignIn(signIn model.SignIn) (string, error) {
+	userDomain, err := a.userService.GetByLogin(signIn.Login)
+	if err != nil {
+		return "", err
+	}
+
+	res := checkPassword(userDomain.Password, signIn.Password)
+	if !res {
+		return "", errors.New(fmt.Sprintf("user password invalid, user login %s", signIn.Login))
+	}
+	token, err := security.GenerateToken(userDomain.Id, userDomain.UserRole)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }
 
 func generatePasswordHash(password string) (string, error) {
 	const op = "service.usesacses.auth.generatePasswordHash"
-	slog.With("op", op)
 
 	b, err := bcrypt.GenerateFromPassword(
 		[]byte(password),
@@ -55,13 +78,12 @@ func generatePasswordHash(password string) (string, error) {
 	}
 	return string(b), err
 }
-func checkPassword(password string, hash string) bool {
-	const op = "service.use.auth.checkPassword"
-	slog.With("op", op)
 
+func checkPassword(hashedPassword string, passwordToCheck string) bool {
 	err := bcrypt.CompareHashAndPassword(
-		[]byte(hash),
-		[]byte(password),
+		[]byte(hashedPassword),
+		[]byte(passwordToCheck),
 	)
+
 	return err == nil
 }

@@ -1,4 +1,4 @@
-package jwt
+package security
 
 import (
 	"fmt"
@@ -13,21 +13,23 @@ var secretKey = []byte("2cc801953a01607bb319c9cd5d6f131d29be53cdc69a8793acda7503
 
 type CustomClaims struct {
 	jwt.RegisteredClaims
-	*customerInfo
+	*CustomerInfo
 }
-type customerInfo struct {
-	Id   int    `json:"id"`
+type CustomerInfo struct {
+	Id   int64  `json:"id"`
 	Role string `json:"role"`
 }
 
-func GenerateToken(userId int, userRole string) (string, error) {
-	slog.Info("Call generate token jwt for", slog.Int("UserId", userId), slog.String("UserRole", userRole))
+func GenerateToken(userId int64, userRole string) (string, error) {
+	slog.Info("Call generate token jwt for",
+		slog.Int64("UserId", userId), slog.String("UserRole", userRole))
+
 	claims := CustomClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		customerInfo: &customerInfo{
+		CustomerInfo: &CustomerInfo{
 			Id:   userId,
 			Role: userRole,
 		},
@@ -51,23 +53,17 @@ func ParseToken(tokenStr string) (*jwt.Token, error) {
 func GetRoleFromClaims(claims *CustomClaims) (string, bool) {
 	slog.Info("Call GetRoleFromClaims ")
 
-	if claims == nil {
+	if claims == nil || claims.CustomerInfo == nil {
 		return "", false
 	}
-	if claims.customerInfo == nil {
-		return "", false
-	}
-
-	return claims.Role, claims.Role != ""
+	return claims.Role, true
 }
 
-func GetUserIdFromClaims(claims *CustomClaims) (int, bool) {
+func GetUserIdFromClaims(claims *CustomClaims) (int64, bool) {
 	slog.Info("Call GetUserIdFromClaims ")
-	if claims == nil {
+
+	if claims == nil || claims.CustomerInfo == nil {
 		return 0, false
 	}
-	if claims.customerInfo == nil {
-		return 0, false
-	}
-	return claims.Id, claims.Id != 0
+	return claims.Id, true
 }

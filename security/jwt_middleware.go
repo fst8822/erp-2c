@@ -1,9 +1,8 @@
-package middleware
+package security
 
 import (
 	"context"
-	"erp-2c/dto/response"
-	"erp-2c/security/jwt"
+	"erp-2c/lib/response"
 	"fmt"
 	"net/http"
 	"strings"
@@ -38,7 +37,7 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		token, err := jwt.ParseToken(parts[1])
+		token, err := ParseToken(parts[1])
 		if err != nil || !token.Valid {
 			resp := response.Unauthorized("Invalid token")
 			render.Status(r, resp.Code)
@@ -46,7 +45,7 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		claims, ok := token.Claims.(*jwt.CustomClaims)
+		claims, ok := token.Claims.(*CustomClaims)
 		if !ok {
 			resp := response.Unauthorized("Invalid claims")
 			render.Status(r, resp.Code)
@@ -54,14 +53,14 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		id, ok := jwt.GetUserIdFromClaims(claims)
+		id, ok := GetUserIdFromClaims(claims)
 		if !ok {
 			resp := response.Unauthorized("Invalid token: user Id not found")
 			render.Status(r, resp.Code)
 			render.JSON(w, r, resp)
 			return
 		}
-		role, ok := jwt.GetRoleFromClaims(claims)
+		role, ok := GetRoleFromClaims(claims)
 		if !ok {
 			resp := response.Unauthorized("Invalid token: user role not found")
 			render.Status(r, resp.Code)
