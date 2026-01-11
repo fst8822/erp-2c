@@ -17,8 +17,9 @@ type UserService interface {
 
 type ProductService interface {
 	Save(productToSave model.ProductToSave) (*model.ProductDomain, error)
-	GetById(productId int) (*model.ProductDomain, error)
+	GetById(productId int64) (*model.ProductDomain, error)
+	GetByName(productName string) (*model.ProductDomain, error)
 	GetAll() (*[]model.ProductDomain, error)
-	UpdateById(productId int) error
-	DeleteById(productId int) error
+	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
+	DeleteById(productId int64) error
 }
