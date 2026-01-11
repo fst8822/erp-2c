@@ -7,7 +7,7 @@ type ProductRepository interface {
 	GetById(productId int64) (*model.ProductDB, error)
 	GetByName(productName string) (*model.ProductDB, error)
 	GetAll() ([]model.ProductDB, error)
-	UpdateById(productId int64, productToUpdate model.ProductDB) error
+	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
 	DeleteById(productId int64) error
 	GetByGroupName(groupId string) ([]model.ProductDB, error)
 }
