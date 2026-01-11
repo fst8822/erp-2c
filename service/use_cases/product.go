@@ -45,22 +45,78 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 	return &productDomain, nil
 }
 
-func (p *ProductService) GetById(productId int) (*model.ProductDomain, error) {
-	return &model.ProductDomain{}, nil
+func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) {
+	const op = "service.usescases.product.GetById"
+
+	product, err := p.store.ProductRepo.GetById(productId)
+	if err != nil {
+		return nil, err
+	}
+	productDB := model.ProductDomain{
+		Id:           product.Id,
+		ProductName:  product.ProductName,
+		ProductGroup: product.ProductGroup,
+		Image:        product.Image,
+		Stock:        product.Stock,
+		Price:        product.Price,
+	}
+	return &productDB, nil
 }
 
 func (p *ProductService) GetByName(productName string) (*model.ProductDomain, error) {
-	return &model.ProductDomain{}, nil
+	const op = "service.usescases.product.GetByName"
+
+	product, err := p.store.ProductRepo.GetByName(productName)
+	if err != nil {
+		return nil, err
+	}
+	productDB := model.ProductDomain{
+		Id:           product.Id,
+		ProductName:  product.ProductName,
+		ProductGroup: product.ProductGroup,
+		Image:        product.Image,
+		Stock:        product.Stock,
+		Price:        product.Price,
+	}
+	return &productDB, nil
 }
 
 func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
-	return &[]model.ProductDomain{}, nil
+	const op = "service.usescases.product.GetAll"
+
+	productsDB, err := p.store.ProductRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+	var productsDomain []model.ProductDomain
+	for _, productDB := range productsDB {
+		productDomain := model.ProductDomain{
+			Id:           productDB.Id,
+			ProductName:  productDB.ProductName,
+			ProductGroup: productDB.ProductGroup,
+			Image:        productDB.Image,
+			Stock:        productDB.Stock,
+			Price:        productDB.Price,
+		}
+		productsDomain = append(productsDomain, productDomain)
+	}
+	return &productsDomain, nil
 }
 
-func (p *ProductService) UpdateById(product int) error {
+func (p *ProductService) UpdateById(productId int64, productToUpdate model.ProductUpdate) error {
+	const op = "service.usescases.product.UpdateById"
+
+	if err := p.store.ProductRepo.UpdateById(productId, productToUpdate); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (p *ProductService) DeleteById(product int) error {
+func (p *ProductService) DeleteById(productId int64) error {
+	const op = "service.usescases.product.DeleteById"
+
+	if err := p.store.ProductRepo.DeleteById(productId); err != nil {
+		return err
+	}
 	return nil
 }

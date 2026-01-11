@@ -5,6 +5,7 @@ import (
 	"erp-2c/model"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -66,14 +67,30 @@ func (p *ProductRepository) GetAll() ([]model.ProductDB, error) {
 	var products []model.ProductDB
 
 	query := ` SELECT * FROM products`
-
 	if err := p.db.Select(&products, query); err != nil {
 		return nil, fmt.Errorf("failed to get list product %w", err)
 	}
 	return products, nil
 }
 
-func (p *ProductRepository) UpdateById(productId int64, productToUpdate model.ProductDB) error {
+func (p *ProductRepository) UpdateById(productId int64, productToUpdate model.ProductUpdate) error {
+	params, fields := buildUpdateParams(productId, productToUpdate)
+	if len(fields) == 0 {
+		return errors.New("no fields to update")
+	}
+
+	query := fmt.Sprintf("UPDATE products SET %s WHERE id = :id", strings.Join(fields, ", "))
+	res, err := p.db.NamedExec(query, params)
+	if err != nil {
+		return fmt.Errorf("failed to update product with id %d: %w", productId, err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows count: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("product with id %d not found", productId)
+	}
 	return nil
 }
 
@@ -99,4 +116,32 @@ func (p *ProductRepository) GetByGroupName(groupName string) ([]model.ProductDB,
 		return nil, fmt.Errorf("failed to list product from group %w", err)
 	}
 	return products, nil
+}
+
+func buildUpdateParams(productId int64, productToUpdate model.ProductUpdate) (map[string]any, []string) {
+	params := make(map[string]any)
+	var setFields []string
+
+	if productToUpdate.ProductName != nil {
+		params["name"] = *productToUpdate.ProductName
+		setFields = append(setFields, "product_name = :name")
+	}
+	if productToUpdate.ProductGroup != nil {
+		params["pGroup"] = *productToUpdate.ProductGroup
+		setFields = append(setFields, "product_group = :pGroup")
+	}
+	if productToUpdate.Image != nil {
+		params["pImage"] = *productToUpdate.Image
+		setFields = append(setFields, "image = :pImage")
+	}
+	if productToUpdate.Stock != nil {
+		params["stock"] = *productToUpdate.Stock
+		setFields = append(setFields, "stock = :stock")
+	}
+	if productToUpdate.Price != nil {
+		params["price"] = *productToUpdate.Price
+		setFields = append(setFields, "price = :price")
+	}
+	params["id"] = productId
+	return params, setFields
 }
