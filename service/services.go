@@ -5,19 +5,20 @@ import (
 )
 
 type AuthService interface {
-	SignUp(UserToSave model.User) (*model.User, error)
-	SignIn(login string, password string) (string, error)
+	SignUp(signUp model.SignUp) (*model.UserDomain, error)
+	SignIn(signIn model.SignIn) (string, error)
 }
 
 type UserService interface {
-	Save(userToSave model.User) (*model.User, error)
-	GetById(userId int) (*model.User, error)
+	Save(userToSave model.SignUp) (*model.UserDomain, error)
+	GetById(userId int64) (*model.UserDomain, error)
+	GetByLogin(userId string) (*model.UserDomain, error)
 }
 
 type ProductService interface {
-	Save(productToSave model.Product) (*model.Product, error)
-	GetById(productId int) (*model.Product, error)
-	GetAll() (*[]model.Product, error)
+	Save(productToSave model.ProductToSave) (*model.ProductDomain, error)
+	GetById(productId int) (*model.ProductDomain, error)
+	GetAll() (*[]model.ProductDomain, error)
 	UpdateById(productId int) error
 	DeleteById(productId int) error
 }
