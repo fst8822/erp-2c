@@ -26,22 +26,18 @@ func NewAuthService(store *store.Store, userService service.UserService) *AuthSe
 }
 
 func (a *AuthService) SignUp(signUp model.SignUp) (*model.UserDomain, error) {
-	//todo error needs to be handle, or use slog?
 	const op = "service.usescases.auth.SignUp"
 
 	passHash, err := generatePasswordHash(signUp.Password)
-	//todo where to handle the error or use logging: 1. where i call method or in method which we call
 	if err != nil {
 		slog.Error("failed generate password hash", slog.String("login", signUp.Login), sl.ErrWithOP(err, op))
-
 		return nil, fmt.Errorf("user login %s, %w", signUp.Login, err)
 	}
 	signUp.Password = passHash
 
 	saved, err := a.userService.Save(signUp)
 	if err != nil {
-		slog.Error("failed to get jwt token", signUp.Login,
-			slog.String("login", signUp.Login), sl.ErrWithOP(err, op))
+		slog.Error("failed to get jwt token", slog.String("login", signUp.Login), sl.ErrWithOP(err, op))
 
 		return nil, fmt.Errorf("failed to save user with login %s, %w", signUp.Login, err)
 	}
@@ -49,6 +45,8 @@ func (a *AuthService) SignUp(signUp model.SignUp) (*model.UserDomain, error) {
 }
 
 func (a *AuthService) SignIn(signIn model.SignIn) (string, error) {
+	const op = "service.usescases.auth.SignIn"
+
 	userDomain, err := a.userService.GetByLogin(signIn.Login)
 	if err != nil {
 		return "", err

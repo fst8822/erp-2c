@@ -2,7 +2,6 @@ package security
 
 import (
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -21,8 +20,6 @@ type CustomerInfo struct {
 }
 
 func GenerateToken(userId int64, userRole string) (string, error) {
-	slog.Info("Call generate token jwt for",
-		slog.Int64("UserId", userId), slog.String("UserRole", userRole))
 
 	claims := CustomClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -40,7 +37,6 @@ func GenerateToken(userId int64, userRole string) (string, error) {
 }
 
 func ParseToken(tokenStr string) (*jwt.Token, error) {
-	slog.Info("Begin parse token")
 
 	return jwt.ParseWithClaims(tokenStr, &CustomClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -51,7 +47,6 @@ func ParseToken(tokenStr string) (*jwt.Token, error) {
 }
 
 func GetRoleFromClaims(claims *CustomClaims) (string, bool) {
-	slog.Info("Call GetRoleFromClaims ")
 
 	if claims == nil || claims.CustomerInfo == nil {
 		return "", false
@@ -60,7 +55,6 @@ func GetRoleFromClaims(claims *CustomClaims) (string, bool) {
 }
 
 func GetUserIdFromClaims(claims *CustomClaims) (int64, bool) {
-	slog.Info("Call GetUserIdFromClaims ")
 
 	if claims == nil || claims.CustomerInfo == nil {
 		return 0, false

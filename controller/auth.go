@@ -21,7 +21,6 @@ func NewAuthController(services *use_cases.Manager) *AuthController {
 
 func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 	const op = "control.auth.SignUp"
-	slog.Info("Post request Save")
 
 	var singUp model.SignUp
 
@@ -50,7 +49,6 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 
 func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
 	const op = "control.auth.SignIn"
-	slog.Info("Post request SignIn")
 
 	var signIn model.SignIn
 
