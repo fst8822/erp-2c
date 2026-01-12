@@ -14,10 +14,9 @@ type UserService struct {
 	validate *validator.Validate
 }
 
-func NewUserService(store *store.Store, validate *validator.Validate) *UserService {
+func NewUserService(store *store.Store) *UserService {
 	return &UserService{
-		store:    store,
-		validate: validate,
+		store: store,
 	}
 }
 

@@ -1,5 +1,11 @@
 package response
 
+import (
+	"fmt"
+
+	"github.com/go-playground/validator/v10"
+)
+
 const (
 	statusOK                  = 200
 	statusCreated             = 201
@@ -67,4 +73,17 @@ func ErrorWithData(code int, message string, data any) *Response {
 
 func (r *Response) WithBody(body any) {
 	r.Body = body
+}
+
+func validateErrors(err validator.ValidationErrors) {
+	details := make(map[string]string)
+
+	for _, e := range err {
+		field := e.Field()
+		switch e.Tag() {
+		case details[field]:
+			fmt.Sprintf("")
+
+		}
+	}
 }
