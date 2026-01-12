@@ -9,14 +9,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
 )
 
 type UserController struct {
 	services *use_cases.Manager
+	validate *validator.Validate
 }
 
-func NewUserController(services *use_cases.Manager) *UserController {
-	return &UserController{services: services}
+func NewUserController(services *use_cases.Manager, validate *validator.Validate) *UserController {
+	return &UserController{
+		services: services,
+		validate: validate,
+	}
 }
 
 func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {

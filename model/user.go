@@ -2,7 +2,7 @@ package model
 
 type SignUp struct {
 	FirstName string `json:"first_name" validate:"required"`
-	Email     string `json:"email" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
 	Login     string `json:"login" validate:"required"`
 	Password  string `json:"password,omitempty" validate:"required"`
 	UserRole  string `json:"user_role" validate:"required"`
