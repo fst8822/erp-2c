@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-playground/validator/v10"
 )
 
 func New(serviceManager *use_cases.Manager) http.Handler {
@@ -17,10 +18,10 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
-
-	authController := controller.NewAuthController(serviceManager)
-	userController := controller.NewUserController(serviceManager)
-	productController := controller.NewProductController(serviceManager)
+	validate := validator.New()
+	authController := controller.NewAuthController(serviceManager, validate)
+	userController := controller.NewUserController(serviceManager, validate)
+	productController := controller.NewProductController(serviceManager, validate)
 
 	router.Route("/api/v1", func(r chi.Router) {
 
