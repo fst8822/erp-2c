@@ -9,14 +9,19 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
 )
 
 type AuthController struct {
 	services *use_cases.Manager
+	validate *validator.Validate
 }
 
-func NewAuthController(services *use_cases.Manager) *AuthController {
-	return &AuthController{services: services}
+func NewAuthController(services *use_cases.Manager, validate *validator.Validate) *AuthController {
+	return &AuthController{
+		services: services,
+		validate: validate,
+	}
 }
 
 func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -29,6 +34,16 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 		slog.Error("Failed to decode request body", sl.ErrWithOP(err, op))
 
 		resp := response.BadRequest("Invalid json decode body", r.Body)
+		render.Status(r, resp.Code)
+		render.JSON(w, r, resp)
+		return
+	}
+
+	validate := validator.New()
+	err = validate.Struct(&singUp)
+	if err != nil {
+		slog.Error("Failed validate resuest fields", sl.ErrWithOP(err, op))
+		resp := response.BadRequest("Failed validate resuest fields", err.Error())
 		render.Status(r, resp.Code)
 		render.JSON(w, r, resp)
 		return
