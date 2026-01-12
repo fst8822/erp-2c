@@ -5,7 +5,7 @@ type ProductToSave struct {
 	ProductGroup string `json:"product-group,omitempty" validate:"omitempty"`
 	Image        byte   `json:"image,omitempty" validate:"omitempty"`
 	Stock        int64  `json:"stock,omitempty" validate:"omitempty"`
-	Price        int64  `json:"price,omitempty" validate:"omitempty"`
+	Price        int64  `json:"price,omitempty" validate:"omitempty,gte=0"`
 }
 
 type ProductUpdate struct {

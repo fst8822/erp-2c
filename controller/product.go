@@ -9,14 +9,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
 )
 
 type ProductController struct {
 	services *use_cases.Manager
+	validate *validator.Validate
 }
 
-func NewProductController(services *use_cases.Manager) *ProductController {
-	return &ProductController{services: services}
+func NewProductController(services *use_cases.Manager, validate *validator.Validate) *ProductController {
+	return &ProductController{
+		services: services,
+		validate: validate,
+	}
 }
 
 func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
