@@ -5,8 +5,6 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
-	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -33,41 +31,25 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	err := render.DecodeJSON(r.Body, &singUp)
 	if err != nil {
-		slog.Error("Failed to decode request body", sl.ErrWithOP(err, op))
-
-		resp := response.BadRequest("Invalid json decode body", r.Body)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed to decode request body", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
 
 	err = a.validate.Struct(&singUp)
 	if err != nil {
-		var errsValid validator.ValidationErrors
-		if errors.As(err, &errsValid) {
-			for _, r := range errsValid {
-				fmt.Printf("field %s tag %s value %s param %s", r.Field(), r.Tag(), r.Value(), r.Param())
-			}
-		}
-
-		//slog.Error("Failed validate resuest fields", sl.ErrWithOP(err, op))
-		resp := response.BadRequest("Failed validate resuest fields", err.Error())
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed validate request fields", sl.ErrWithOP(err, op))
+		response.ValidationError(err).SendResponse(w, r)
 		return
 	}
 
 	saved, err := a.services.AuthService.SignUp(singUp)
 	if err != nil {
-		slog.Error("Failed to save user", sl.ErrWithOP(err, op))
-
-		resp := response.InternalServerError("Failed to save user")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed to save user", sl.ErrWithOP(err, op))
+		response.InternalServerError().SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusCreated)
-	render.JSON(w, r, response.Created("Success", saved))
+	response.Created(saved).SendResponse(w, r)
 }
 
 func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
@@ -77,23 +59,17 @@ func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	err := render.DecodeJSON(r.Body, &signIn)
 	if err != nil {
-		slog.Error("Invalid json decode body", sl.ErrWithOP(err, op))
-
-		res := response.BadRequest("Invalid json decode body", r.Body)
-		render.Status(r, res.Code)
-		render.JSON(w, r, res)
+		slog.Error("failed to decode request body", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
 
 	token, err := a.services.AuthService.SignIn(signIn)
 	if err != nil {
-		slog.Error("failed to get jwt token", sl.ErrWithOP(err, op))
-
-		res := response.Unauthorized("Unauthorized")
-		render.Status(r, res.Code)
-		render.JSON(w, r, res)
+		slog.Error("failed Unauthorized", sl.ErrWithOP(err, op))
+		response.Unauthorized("Failed Unauthorized").SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, response.OK("OK", token))
+
+	response.OK(token).SendResponse(w, r)
 }
