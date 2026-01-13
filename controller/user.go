@@ -2,8 +2,10 @@ package controller
 
 import (
 	"erp-2c/lib/response"
+	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -28,17 +30,15 @@ func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.user.GetById"
 
 	idParam := chi.URLParam(r, "id")
-	userId, err := strconv.Atoi(idParam)
+	userId, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
-		resp := response.BadRequest("failed to parse path variable", idParam)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed convert str to int64", sl.ErrWithOP(err, op))
+		response.BadRequest("invalid user id").SendResponse(w, r)
 		return
 	}
 
-	found, _ := c.services.UserService.GetById(int64(userId))
-	w.WriteHeader(http.StatusOK)
-	render.JSON(w, r, response.OK("successful", found))
+	found, _ := c.services.UserService.GetById(userId)
+	response.OK(found).SendResponse(w, r)
 }
 
 func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
@@ -48,18 +48,16 @@ func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
 
 	err := render.DecodeJSON(r.Body, &userToSave)
 	if err != nil {
-		resp := response.BadRequest("Invalid json decode body", r.Body)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed parse request body", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
 	saved, err := c.services.UserService.Save(userToSave)
 	if err != nil {
-		resp := response.InternalServerError("InternalServerError")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		//todo need discern, maybe constrain or err sql
+		slog.Error("failed save user", sl.ErrWithOP(err, op))
+		response.InternalServerError().SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, response.OK("successful", saved))
+	response.Created(saved).SendResponse(w, r)
 }
