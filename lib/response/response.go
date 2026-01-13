@@ -1,89 +1,121 @@
 package response
 
 import (
+	"erp-2c/lib/sl"
+	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
 
+	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
-)
-
-const (
-	statusOK                  = 200
-	statusCreated             = 201
-	statusBadRequest          = 400
-	statusUnauthorized        = 401
-	statusForbidden           = 403
-	statusNotFound            = 404
-	statusConflict            = 409
-	statusInternalServerError = 500
 )
 
 type Response struct {
 	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Message string `json:"message,omitempty"`
 	Body    any    `json:"body,omitempty"`
 }
 
-func New(code int, message string, body any) *Response {
-	return &Response{Code: code, Message: message, Body: body}
+func (r Response) Render(w http.ResponseWriter, req *http.Request) error {
+	render.Status(req, r.Code)
+	return nil
 }
 
-func Success(code int, msg string, body any) *Response {
-	return New(code, msg, body)
+func (r Response) SendResponse(w http.ResponseWriter, req *http.Request) {
+	if err := render.Render(w, req, r); err != nil {
+		slog.Error("failed tor render response", sl.Err(err))
+	}
 }
 
-func Error(code int, msg string) *Response {
-	return New(code, msg, nil)
+func NoContent() Response {
+	return Response{
+		Code: http.StatusNoContent,
+	}
 }
 
-func OK(msg string, body any) *Response {
-	return New(statusOK, msg, body)
+func OK(body any) Response {
+	return Response{
+		Code: http.StatusOK,
+		Body: &body,
+	}
 }
 
-func Created(msg string, body any) *Response {
-	return New(statusCreated, msg, body)
+func Created(body any) Response {
+	return Response{
+		Code: http.StatusCreated,
+		Body: &body,
+	}
 }
 
-func BadRequest(message string, body any) *Response {
-	return New(statusBadRequest, message, body)
+func BadRequest(message string) Response {
+	return Response{
+		Code:    http.StatusBadRequest,
+		Message: message,
+	}
 }
 
-func Unauthorized(message string) *Response {
-	return New(statusUnauthorized, message, nil)
+func Unauthorized(message string) Response {
+	return Response{
+		Code:    http.StatusUnauthorized,
+		Message: message,
+	}
 }
 
-func Forbidden(message string) *Response {
-	return New(statusForbidden, message, nil)
+func Forbidden(message string) Response {
+	return Response{
+		Code:    http.StatusForbidden,
+		Message: message,
+	}
 }
 
-func NotFound(message string) *Response {
-	return New(statusNotFound, message, nil)
+func NotFound(message string) Response {
+	return Response{
+		Code:    http.StatusNotFound,
+		Message: message,
+	}
 }
 
-func AlreadyExist(message string) *Response {
-	return New(statusConflict, message, nil)
+func AlreadyExist(message string) Response {
+	return Response{
+		Code:    http.StatusConflict,
+		Message: message,
+	}
 }
 
-func InternalServerError(message string) *Response {
-	return New(statusInternalServerError, message, nil)
+func InternalServerError() Response {
+	return Response{
+		Code: http.StatusInternalServerError,
+	}
 }
 
-func ErrorWithData(code int, message string, data any) *Response {
-	return New(code, message, data)
-}
+func ValidationError(err error) Response {
 
-func (r *Response) WithBody(body any) {
-	r.Body = body
-}
+	var validationErr validator.ValidationErrors
+	if !errors.As(err, &validationErr) {
+		return Response{
+			Code:    http.StatusInternalServerError,
+			Message: "Internal Server Error",
+		}
+	}
 
-func validateErrors(err validator.ValidationErrors) {
 	details := make(map[string]string)
-
-	for _, e := range err {
+	for _, e := range validationErr {
 		field := e.Field()
 		switch e.Tag() {
-		case details[field]:
-			fmt.Sprintf("")
-
+		case "required":
+			details[field] = fmt.Sprintf("field: %s is required field", e.Field())
+		case "email":
+			details[field] = fmt.Sprintf("field %s is invalid format, value: %s", e.Field(), e.Value())
+		case "gte":
+			details[field] = fmt.Sprintf("field %s is invalid param: %s", e.Field(), e.Param())
+		default:
+			details[field] = fmt.Sprintf("validation error %s", e.Tag())
 		}
+	}
+	return Response{
+		Code:    http.StatusBadRequest,
+		Message: "Validation failed",
+		Body:    details,
 	}
 }
