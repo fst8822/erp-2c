@@ -5,6 +5,7 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -42,10 +43,13 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	err = a.validate.Struct(&singUp)
 	if err != nil {
-		e, _ := err.(validator.ValidationErrors)
-		for _, fieldError := range e {
-			fmt.Printf("field %s tag %s value %s ", fieldError.Field(), fieldError.Tag(), fieldError.Value())
+		var errsValid validator.ValidationErrors
+		if errors.As(err, &errsValid) {
+			for _, r := range errsValid {
+				fmt.Printf("field %s tag %s value %s param %s", r.Field(), r.Tag(), r.Value(), r.Param())
+			}
 		}
+
 		//slog.Error("Failed validate resuest fields", sl.ErrWithOP(err, op))
 		resp := response.BadRequest("Failed validate resuest fields", err.Error())
 		render.Status(r, resp.Code)
