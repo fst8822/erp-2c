@@ -123,3 +123,178 @@ func handleValidationErrors(err error) *AppError {
 			details[field] = fmt.Sprintf("Ошибка валидации: %s", e.Tag())
 		}
 	}
+
+
+***
+func ValidationError(err error) Response {
+    details, parseErr := handleValidateErr(err)
+    if parseErr != nil {
+        return InternalServerError()
+    }
+    return Response{
+        Code:    http.StatusUnprocessableEntity,
+        Message: "Validation failed",
+        Body:    details,
+    }
+}
+
+func OK(body any) Response {
+    return Response{
+        Code: http.StatusOK,
+        Body: body,
+    }
+}
+// Render implements chi's render.Renderer interface
+func (r Response) Render(w http.ResponseWriter, req *http.Request) error {
+    render.Status(req, r.Code)
+    return nil
+}
+
+// Send отправляет Response через chi render
+func (r Response) Send(w http.ResponseWriter, req *http.Request) {
+    render.Render(w, req, r)
+}
+// Вариант 1: через .Send()
+func GetUser(w http.ResponseWriter, r *http.Request) {
+    user, err := userService.Get(id)
+    if err != nil {
+        response.NotFound("User not found").Send(w, r)
+        return
+    }
+    response.OK(user).Send(w, r)
+}
+
+// Вариант 2: напрямую через render
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+    var req CreateUserRequest
+    if err := render.Bind(r, &req); err != nil {
+        render.Render(w, r, response.ValidationError(err))
+        return
+    }
+
+    user, err := userService.Create(req)
+    if err != nil {
+        render.Render(w, r, response.InternalServerError())
+        return
+    }
+
+    render.Render(w, r, response.Created(user))
+}
+
+**
+render.Bind — это функция из chi/render,
+которая десериализует HTTP запрос в Go структуру и вызывает её метод валидации.
+// 1. Определяешь структуру запроса
+type CreateUserRequest struct {
+    Email    string `json:"email" validate:"required,email"`
+    Password string `json:"password" validate:"required,min=8"`
+    Name     string `json:"name" validate:"required"`
+}
+
+// 2. Реализуешь интерфейс render.Binder
+func (req *CreateUserRequest) Bind(r *http.Request) error {
+    // Здесь можно добавить кастомную валидацию
+    if req.Email == "" {
+        return errors.New("email is required")
+    }
+
+    // Или использовать validator
+    validate := validator.New()
+    if err := validate.Struct(req); err != nil {
+        return err
+    }
+
+    return nil
+}
+
+// 3. В handler используешь render.Bind
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+    var req CreateUserRequest
+
+    // render.Bind делает 2 вещи:
+    // - декодирует JSON из body в &req
+    // - вызывает req.Bind(r) для валидации
+    if err := render.Bind(r, &req); err != nil {
+        response.ValidationError(err).Send(w, r)
+        return
+    }
+
+    // req уже провалидирован и готов к использованию
+    user := createUser(req)
+    response.Created(user).Send(w, r)
+}
+
+Улучшенная обработка в твоём пакете:
+
+package response
+
+import (
+    "encoding/json"
+    "errors"
+    "fmt"
+    "net/http"
+
+    "github.com/go-chi/render"
+    "github.com/go-playground/validator/v10"
+)
+
+// BindAndValidate обёртка над render.Bind с умной обработкой ошибок
+func BindAndValidate(r *http.Request, v render.Binder) Response {
+    if err := render.Bind(r, v); err != nil {
+        // Проверяем, это ошибка валидации или декодирования
+        var validationErr validator.ValidationErrors
+        if errors.As(err, &validationErr) {
+            return ValidationError(err)
+        }
+
+        // Ошибка декодирования JSON
+        var jsonErr *json.UnmarshalTypeError
+        if errors.As(err, &jsonErr) {
+            return BadRequest(fmt.Sprintf("Invalid type for field '%s'", jsonErr.Field))
+        }
+
+        // Другие ошибки
+        return BadRequest("Invalid request format")
+    }
+
+    return Response{} // пустой Response = успех
+}
+
+func ValidationError(err error) Response {
+    details, parseErr := handleValidateErr(err)
+    if parseErr != nil {
+        return InternalServerError()
+    }
+    return Response{
+        Code:    http.StatusUnprocessableEntity,
+        Message: "Validation failed",
+        Body:    details,
+    }
+}
+Использование в handler:
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+    var req CreateUserRequest
+
+    // Умная обработка всех типов ошибок
+    if resp := response.BindAndValidate(r, &req); resp.Code != 0 {
+        resp.Send(w, r)
+        return
+    }
+
+    // req декодирован и провалидирован ✅
+    user := createUser(req)
+    response.Created(user).Send(w, r)
+}
+```
+
+## Итог:
+```
+HTTP Request
+    ↓
+render.Bind(r, &req)
+    ↓
+1. Decode(r, &req)           ← декодирует JSON в структуру
+    ↓
+2. req.Bind(r)               ← вызывает твой метод валидации
+    ↓
+return error (или nil)
