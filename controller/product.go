@@ -2,8 +2,10 @@ package controller
 
 import (
 	"erp-2c/lib/response"
+	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -29,19 +31,18 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 
 	var productToSave model.ProductToSave
 	if err := render.DecodeJSON(r.Body, &productToSave); err != nil {
-		resp := response.BadRequest("Invalid json decode body", r.Body)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed parse request body", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
 	saved, err := p.services.ProductService.Save(productToSave)
 	if err != nil {
-		resp := response.InternalServerError("InternalServerError")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed save product", sl.ErrWithOP(err, op))
+		//todo need discern, maybe constrain or err sql
+		response.InternalServerError().SendResponse(w, r)
 		return
 	}
-	render.JSON(w, r, saved)
+	response.Created(saved).SendResponse(w, r)
 }
 
 func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -49,35 +50,32 @@ func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	products, err := p.services.ProductService.GetAll()
 	if err != nil {
-		resp := response.NotFound("NotFound")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		//todo need discern, maybe constrain or err sql
+		slog.Error("InternalServerError", sl.ErrWithOP(err, op))
+		response.InternalServerError().SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, response.OK("Products", products))
+	response.OK(products).SendResponse(w, r)
 }
 
 func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.GetById"
 
-	productIdParam := chi.URLParam(r, "id")
-	productId, err := strconv.Atoi(productIdParam)
+	param := chi.URLParam(r, "id")
+	productId, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
-		resp := response.BadRequest("failed to parse path variable", productId)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed convert str to int64", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid path variable").SendResponse(w, r)
 		return
 	}
-	productDomain, err := p.services.ProductService.GetById(int64(productId))
+	found, err := p.services.ProductService.GetById(productId)
 	if err != nil {
-		resp := response.NotFound("NotFound")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		//todo need discern, maybe constrain or err sql
+		slog.Error("failed convert str to int", sl.ErrWithOP(err, op))
+		response.NotFound("Product not found").SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, response.OK("OK", productDomain))
+	response.OK(found).SendResponse(w, r)
 }
 
 func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
@@ -86,62 +84,53 @@ func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
 	productName := chi.URLParam(r, "name")
 	productDomain, err := p.services.ProductService.GetByName(productName)
 	if err != nil {
-		resp := response.NotFound("NotFound")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("Product not found", sl.ErrWithOP(err, op))
+		response.NotFound("Product not found").SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, response.OK("OK", productDomain))
+	response.OK(productDomain).SendResponse(w, r)
 }
 
 func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.UpdateById"
 
-	idParam := chi.URLParam(r, "id")
-	productId, err := strconv.Atoi(idParam)
+	Param := chi.URLParam(r, "id")
+	productId, err := strconv.ParseInt(Param, 10, 64)
 	if err != nil {
-		resp := response.BadRequest("failed to parse path variable", productId)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed convert str to int64", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid path variable").SendResponse(w, r)
 		return
 	}
 	var productToUpdate model.ProductUpdate
 
 	if err := render.DecodeJSON(r.Body, &productToUpdate); err != nil {
-		resp := response.BadRequest("Invalid json decode body", r.Body)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed parse request body", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
-	if err := p.services.ProductService.UpdateById(int64(productId), productToUpdate); err != nil {
-		resp := response.NotFound("NotFound")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+	if err := p.services.ProductService.UpdateById(productId, productToUpdate); err != nil {
+		slog.Error("failed update product", sl.ErrWithOP(err, op))
+		response.NotFound("product not found").SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, response.OK("ok", nil))
+	response.OK(nil).SendResponse(w, r)
 }
 
 func (p *ProductController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.DeleteById"
 
-	productIdParam := chi.URLParam(r, "id")
-	productId, err := strconv.Atoi(productIdParam)
+	param := chi.URLParam(r, "id")
+	productId, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
-		resp := response.BadRequest("failed to parse path veriable", productId)
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+		slog.Error("failed convert str to int64", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid path variable").SendResponse(w, r)
 		return
 	}
 
-	if err := p.services.ProductService.DeleteById(int64(productId)); err != nil {
-		resp := response.NotFound("NotFound")
-		render.Status(r, resp.Code)
-		render.JSON(w, r, resp)
+	if err := p.services.ProductService.DeleteById(productId); err != nil {
+		slog.Error("failed delete product", sl.ErrWithOP(err, op))
+		response.NotFound("NotFound").SendResponse(w, r)
 		return
 	}
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, response.OK("ok", nil))
+	response.NoContent()
 }
