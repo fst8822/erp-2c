@@ -26,6 +26,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 		Stock:        productToSave.Stock,
 		Price:        productToSave.Price,
 	}
+
 	saved, err := p.store.ProductRepo.Save(productDB)
 	if err != nil {
 		slog.Error("failed save product",
@@ -42,6 +43,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 		Stock:        saved.Stock,
 		Price:        saved.Price,
 	}
+
 	return &productDomain, nil
 }
 
@@ -52,6 +54,7 @@ func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) 
 	if err != nil {
 		return nil, err
 	}
+
 	productDB := model.ProductDomain{
 		Id:           product.Id,
 		ProductName:  product.ProductName,
@@ -70,6 +73,7 @@ func (p *ProductService) GetByName(productName string) (*model.ProductDomain, er
 	if err != nil {
 		return nil, err
 	}
+
 	productDB := model.ProductDomain{
 		Id:           product.Id,
 		ProductName:  product.ProductName,
@@ -88,7 +92,9 @@ func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var productsDomain []model.ProductDomain
+
 	for _, productDB := range productsDB {
 		productDomain := model.ProductDomain{
 			Id:           productDB.Id,
@@ -100,6 +106,7 @@ func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
 		}
 		productsDomain = append(productsDomain, productDomain)
 	}
+
 	return &productsDomain, nil
 }
 
@@ -109,6 +116,7 @@ func (p *ProductService) UpdateById(productId int64, productToUpdate model.Produ
 	if err := p.store.ProductRepo.UpdateById(productId, productToUpdate); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -118,5 +126,6 @@ func (p *ProductService) DeleteById(productId int64) error {
 	if err := p.store.ProductRepo.DeleteById(productId); err != nil {
 		return err
 	}
+
 	return nil
 }

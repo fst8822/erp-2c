@@ -35,13 +35,20 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
+
+	if err := p.validate.Struct(productToSave); err != nil {
+		slog.Error("failed validate request fields", sl.ErrWithOP(err, op))
+		response.ValidationError(err).SendResponse(w, r)
+		return
+	}
+
 	saved, err := p.services.ProductService.Save(productToSave)
 	if err != nil {
 		slog.Error("failed save product", sl.ErrWithOP(err, op))
-		//todo need discern, maybe constrain or err sql
 		response.InternalServerError().SendResponse(w, r)
 		return
 	}
+
 	response.Created(saved).SendResponse(w, r)
 }
 
@@ -50,11 +57,11 @@ func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	products, err := p.services.ProductService.GetAll()
 	if err != nil {
-		//todo need discern, maybe constrain or err sql
 		slog.Error("InternalServerError", sl.ErrWithOP(err, op))
 		response.InternalServerError().SendResponse(w, r)
 		return
 	}
+
 	response.OK(products).SendResponse(w, r)
 }
 
@@ -68,6 +75,7 @@ func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest("Invalid path variable").SendResponse(w, r)
 		return
 	}
+
 	found, err := p.services.ProductService.GetById(productId)
 	if err != nil {
 		//todo need discern, maybe constrain or err sql
@@ -75,6 +83,7 @@ func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 		response.NotFound("Product not found").SendResponse(w, r)
 		return
 	}
+
 	response.OK(found).SendResponse(w, r)
 }
 
@@ -88,6 +97,7 @@ func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
 		response.NotFound("Product not found").SendResponse(w, r)
 		return
 	}
+
 	response.OK(productDomain).SendResponse(w, r)
 }
 
@@ -101,6 +111,7 @@ func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest("Invalid path variable").SendResponse(w, r)
 		return
 	}
+
 	var productToUpdate model.ProductUpdate
 
 	if err := render.DecodeJSON(r.Body, &productToUpdate); err != nil {
@@ -108,11 +119,13 @@ func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
+
 	if err := p.services.ProductService.UpdateById(productId, productToUpdate); err != nil {
 		slog.Error("failed update product", sl.ErrWithOP(err, op))
 		response.NotFound("product not found").SendResponse(w, r)
 		return
 	}
+
 	response.OK(nil).SendResponse(w, r)
 }
 
@@ -132,5 +145,6 @@ func (p *ProductController) DeleteById(w http.ResponseWriter, r *http.Request) {
 		response.NotFound("NotFound").SendResponse(w, r)
 		return
 	}
+
 	response.NoContent()
 }

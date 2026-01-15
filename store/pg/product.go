@@ -2,6 +2,7 @@ package pg
 
 import (
 	"database/sql"
+	"erp-2c/lib/types"
 	"erp-2c/model"
 	"errors"
 	"fmt"
@@ -24,7 +25,7 @@ func (p *ProductRepository) Save(productToSave model.ProductDB) (*model.ProductD
 
 	rows, err := p.db.NamedQuery(query, productToSave)
 	if err != nil {
-		return nil, fmt.Errorf("failed to insert product: %w", err)
+		return nil, types.NewAppErr("failed to insert product", types.ErrInternalServer)
 	}
 	defer rows.Close()
 
@@ -32,7 +33,7 @@ func (p *ProductRepository) Save(productToSave model.ProductDB) (*model.ProductD
 	productDB := &model.ProductDB{}
 	err = rows.StructScan(productDB)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan product %w", err)
+		return nil, types.NewAppErr("failed to scan product", types.ErrInternalServer)
 	}
 	return productDB, nil
 }
@@ -43,9 +44,10 @@ func (p *ProductRepository) GetById(productId int64) (*model.ProductDB, error) {
 	query := `SELECT * FROM products WHERE id = $1`
 	if err := p.db.Get(productDB, query, productId); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("product with id %d not found", productId)
+			return nil, types.NewAppErr(fmt.Sprintf("product with id %d not found", productId),
+				types.ErrNotFound)
 		}
-		return nil, fmt.Errorf("failed to get product %w", err)
+		return nil, types.NewAppErr("failed to get product", types.ErrInternalServer)
 	}
 	return productDB, nil
 }
@@ -56,9 +58,10 @@ func (p *ProductRepository) GetByName(productName string) (*model.ProductDB, err
 	query := `SELECT * FROM products WHERE product_name = $1`
 	if err := p.db.Get(productDB, query, productName); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("product with name %s not found", productName)
+			return nil, types.NewAppErr(fmt.Sprintf("product with name %s not found", productName),
+				types.ErrNotFound)
 		}
-		return nil, fmt.Errorf("failed ot get product %w", err)
+		return nil, types.NewAppErr("failed to get product", types.ErrInternalServer)
 	}
 	return productDB, nil
 }
@@ -68,7 +71,7 @@ func (p *ProductRepository) GetAll() ([]model.ProductDB, error) {
 
 	query := ` SELECT * FROM products`
 	if err := p.db.Select(&products, query); err != nil {
-		return nil, fmt.Errorf("failed to get list product %w", err)
+		return nil, types.NewAppErr("failed to get list products", types.ErrInternalServer)
 	}
 	return products, nil
 }
@@ -76,20 +79,22 @@ func (p *ProductRepository) GetAll() ([]model.ProductDB, error) {
 func (p *ProductRepository) UpdateById(productId int64, productToUpdate model.ProductUpdate) error {
 	params, fields := buildUpdateParams(productId, productToUpdate)
 	if len(fields) == 0 {
-		return errors.New("no fields to update")
+		return types.NewAppErr("no fields to update", types.ErrNoFieldsUpdate)
 	}
 
 	query := fmt.Sprintf("UPDATE products SET %s WHERE id = :id", strings.Join(fields, ", "))
 	res, err := p.db.NamedExec(query, params)
 	if err != nil {
-		return fmt.Errorf("failed to update product with id %d: %w", productId, err)
+		return types.NewAppErr(fmt.Sprintf("failed to update product with id %d:", productId),
+			types.ErrNoFieldsUpdate)
 	}
+
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("failed to get affected rows count: %w", err)
+		return types.NewAppErr("failed to get affected rows count", types.ErrInternalServer)
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("product with id %d not found", productId)
+		return types.NewAppErr(fmt.Sprintf("product with id %d not found", productId), types.ErrNotFound)
 	}
 	return nil
 }
@@ -101,9 +106,10 @@ func (p *ProductRepository) DeleteById(productId int64) error {
 	err := p.db.QueryRow(query, productId).Scan(&deletedId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("no find to delete product with id %d", productId)
+			return types.NewAppErr(fmt.Sprintf("no find to delete product with id %d", productId),
+				types.ErrNoFieldsUpdate)
 		}
-		return fmt.Errorf("failed to delete product %w", err)
+		return types.NewAppErr("failed to delete product", types.ErrInternalServer)
 	}
 	return nil
 }
@@ -113,7 +119,7 @@ func (p *ProductRepository) GetByGroupName(groupName string) ([]model.ProductDB,
 
 	query := `SELECT * FROM products WHERE product_group = $1`
 	if err := p.db.Select(&products, query, groupName); err != nil {
-		return nil, fmt.Errorf("failed to list product from group %w", err)
+		return nil, types.NewAppErr("failed to list product by group", types.ErrInternalServer)
 	}
 	return products, nil
 }
