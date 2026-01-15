@@ -74,6 +74,7 @@ func generatePasswordHash(password string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed generate password hash %w %s", err, op)
 	}
+
 	return string(b), err
 }
 

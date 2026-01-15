@@ -36,8 +36,7 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.validate.Struct(&singUp)
-	if err != nil {
+	if err = a.validate.Struct(&singUp); err != nil {
 		slog.Error("failed validate request fields", sl.ErrWithOP(err, op))
 		response.ValidationError(err).SendResponse(w, r)
 		return
@@ -61,6 +60,12 @@ func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("failed to decode request body", sl.ErrWithOP(err, op))
 		response.BadRequest("Invalid request body").SendResponse(w, r)
+		return
+	}
+
+	if err := a.validate.Struct(signIn); err != nil {
+		slog.Error("failed validate request fields", sl.ErrWithOP(err, op))
+		response.ValidationError(err).SendResponse(w, r)
 		return
 	}
 
