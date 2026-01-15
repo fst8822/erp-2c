@@ -2,11 +2,11 @@ package use_cases
 
 import (
 	"erp-2c/lib/sl"
+	"erp-2c/lib/types"
 	"erp-2c/model"
 	"erp-2c/security"
 	"erp-2c/service"
 	"erp-2c/store"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -30,16 +30,14 @@ func (a *AuthService) SignUp(signUp model.SignUp) (*model.UserDomain, error) {
 
 	passHash, err := generatePasswordHash(signUp.Password)
 	if err != nil {
-		slog.Error("failed generate password hash", slog.String("login", signUp.Login), sl.ErrWithOP(err, op))
-		return nil, fmt.Errorf("user login %s, %w", signUp.Login, err)
+		slog.Error("failed generate password hash", slog.String("login", signUp.Login), sl.Err(err))
+		return nil, types.NewAppErr("Inspected error", types.ErrPasswordHash)
 	}
 	signUp.Password = passHash
 
 	saved, err := a.userService.Save(signUp)
 	if err != nil {
-		slog.Error("failed to get jwt token", slog.String("login", signUp.Login), sl.ErrWithOP(err, op))
-
-		return nil, fmt.Errorf("failed to save user with login %s, %w", signUp.Login, err)
+		return nil, err
 	}
 	return saved, nil
 }
@@ -52,13 +50,15 @@ func (a *AuthService) SignIn(signIn model.SignIn) (string, error) {
 		return "", err
 	}
 
-	res := checkPassword(userDomain.Password, signIn.Password)
-	if !res {
-		return "", errors.New(fmt.Sprintf("user password invalid, user login %s", signIn.Login))
+	if !checkPassword(userDomain.Password, signIn.Password) {
+		return "", types.NewAppErr(fmt.Sprintf("user with login %s password invalid", signIn.Login),
+			types.ErrUnauthorized)
 	}
+
 	token, err := security.GenerateToken(userDomain.Id, userDomain.UserRole)
 	if err != nil {
-		return "", err
+		slog.Error("failed generate Token", slog.String("login", signIn.Login), sl.Err(err))
+		return "", types.NewAppErr("Inspected error", types.ErrGeneratedToken)
 	}
 
 	return token, nil
@@ -72,7 +72,7 @@ func generatePasswordHash(password string) (string, error) {
 		bcrypt.DefaultCost,
 	)
 	if err != nil {
-		return "", fmt.Errorf("failed generate password hash %w %s", err, op)
+		return "", err
 	}
 
 	return string(b), err

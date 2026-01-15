@@ -3,6 +3,7 @@ package controller
 import (
 	"erp-2c/lib/response"
 	"erp-2c/lib/sl"
+	"erp-2c/lib/types"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
 	"log/slog"
@@ -44,8 +45,7 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	saved, err := a.services.AuthService.SignUp(singUp)
 	if err != nil {
-		slog.Error("failed to save user", sl.ErrWithOP(err, op))
-		response.InternalServerError().SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
 	response.Created(saved).SendResponse(w, r)
@@ -71,10 +71,8 @@ func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	token, err := a.services.AuthService.SignIn(signIn)
 	if err != nil {
-		slog.Error("failed Unauthorized", sl.ErrWithOP(err, op))
-		response.Unauthorized("Failed Unauthorized").SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-
 	response.OK(token).SendResponse(w, r)
 }
