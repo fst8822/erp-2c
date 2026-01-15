@@ -9,7 +9,7 @@ import (
 func ErrWithOP(err error, op string) slog.Attr {
 	return slog.Attr{
 		Key:   "error",
-		Value: slog.StringValue(fmt.Sprintf(err.Error(), op)),
+		Value: slog.StringValue(fmt.Sprintf(err.Error(), " OP: "+op)),
 	}
 }
 
