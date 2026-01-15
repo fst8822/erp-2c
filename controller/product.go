@@ -3,11 +3,13 @@ package controller
 import (
 	"erp-2c/lib/response"
 	"erp-2c/lib/sl"
+	"erp-2c/lib/types"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -44,11 +46,9 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 
 	saved, err := p.services.ProductService.Save(productToSave)
 	if err != nil {
-		slog.Error("failed save product", sl.ErrWithOP(err, op))
-		response.InternalServerError().SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-
 	response.Created(saved).SendResponse(w, r)
 }
 
@@ -57,11 +57,9 @@ func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	products, err := p.services.ProductService.GetAll()
 	if err != nil {
-		slog.Error("InternalServerError", sl.ErrWithOP(err, op))
-		response.InternalServerError().SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-
 	response.OK(products).SendResponse(w, r)
 }
 
@@ -78,12 +76,9 @@ func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 
 	found, err := p.services.ProductService.GetById(productId)
 	if err != nil {
-		//todo need discern, maybe constrain or err sql
-		slog.Error("failed convert str to int", sl.ErrWithOP(err, op))
-		response.NotFound("Product not found").SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-
 	response.OK(found).SendResponse(w, r)
 }
 
@@ -91,13 +86,17 @@ func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.GetByName"
 
 	productName := chi.URLParam(r, "name")
-	productDomain, err := p.services.ProductService.GetByName(productName)
-	if err != nil {
-		slog.Error("Product not found", sl.ErrWithOP(err, op))
-		response.NotFound("Product not found").SendResponse(w, r)
+	if strings.TrimSpace(productName) == "" {
+		slog.Error("Path variable is empty", slog.StringValue(productName))
+		response.BadRequest("Invalid path variable").SendResponse(w, r)
 		return
 	}
 
+	productDomain, err := p.services.ProductService.GetByName(productName)
+	if err != nil {
+		types.HandleError(err).SendResponse(w, r)
+		return
+	}
 	response.OK(productDomain).SendResponse(w, r)
 }
 
@@ -121,11 +120,9 @@ func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := p.services.ProductService.UpdateById(productId, productToUpdate); err != nil {
-		slog.Error("failed update product", sl.ErrWithOP(err, op))
-		response.NotFound("product not found").SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-
 	response.OK(nil).SendResponse(w, r)
 }
 
@@ -141,10 +138,8 @@ func (p *ProductController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := p.services.ProductService.DeleteById(productId); err != nil {
-		slog.Error("failed delete product", sl.ErrWithOP(err, op))
-		response.NotFound("NotFound").SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-
 	response.NoContent()
 }

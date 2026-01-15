@@ -4,7 +4,6 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"erp-2c/store"
-	"fmt"
 	"log/slog"
 )
 
@@ -31,8 +30,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 	if err != nil {
 		slog.Error("failed save product",
 			slog.String("product id", productToSave.ProductName), sl.ErrWithOP(err, op))
-
-		return nil, fmt.Errorf("failed to save product %w", err)
+		return nil, err
 	}
 
 	productDomain := model.ProductDomain{
@@ -52,6 +50,7 @@ func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) 
 
 	product, err := p.store.ProductRepo.GetById(productId)
 	if err != nil {
+		slog.Error("failed to find product", sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
@@ -71,6 +70,7 @@ func (p *ProductService) GetByName(productName string) (*model.ProductDomain, er
 
 	product, err := p.store.ProductRepo.GetByName(productName)
 	if err != nil {
+		slog.Error("failed to find user", sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
@@ -90,6 +90,7 @@ func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
 
 	productsDB, err := p.store.ProductRepo.GetAll()
 	if err != nil {
+		slog.Error("failed to find products", sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
@@ -106,7 +107,6 @@ func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
 		}
 		productsDomain = append(productsDomain, productDomain)
 	}
-
 	return &productsDomain, nil
 }
 
@@ -114,9 +114,9 @@ func (p *ProductService) UpdateById(productId int64, productToUpdate model.Produ
 	const op = "service.usescases.product.UpdateById"
 
 	if err := p.store.ProductRepo.UpdateById(productId, productToUpdate); err != nil {
+		slog.Error("failed to update product", sl.ErrWithOP(err, op))
 		return err
 	}
-
 	return nil
 }
 
@@ -124,8 +124,8 @@ func (p *ProductService) DeleteById(productId int64) error {
 	const op = "service.usescases.product.DeleteById"
 
 	if err := p.store.ProductRepo.DeleteById(productId); err != nil {
+		slog.Error("failed to delete product", sl.ErrWithOP(err, op))
 		return err
 	}
-
 	return nil
 }
