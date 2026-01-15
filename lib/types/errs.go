@@ -4,12 +4,14 @@ import "errors"
 
 var (
 	ErrNotFound        = errors.New("resource not found")
+	ErrPasswordHash    = errors.New("failed generate password hash")
+	ErrGeneratedToken  = errors.New("failed generate token jwt")
 	ErrAlreadyExist    = errors.New("entity already exist")
 	ErrForbidden       = errors.New("forbidden access")
 	ErrBadRequest      = errors.New("bad request")
 	ErrUnauthorized    = errors.New("unauthorized")
-	ErrInternalServer  = errors.New("internalServerError")
 	ErrDatabaseTimeout = errors.New("database timeout")
+	ErrInspectedSQL    = errors.New("inspected SQL")
 	ErrNoFieldsUpdate  = errors.New("no fields to update")
 )
 
