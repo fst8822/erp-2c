@@ -52,12 +52,13 @@ func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest("Invalid request body").SendResponse(w, r)
 		return
 	}
+
 	saved, err := c.services.UserService.Save(userToSave)
 	if err != nil {
-		//todo need discern, maybe constrain or err sql
 		slog.Error("failed save user", sl.ErrWithOP(err, op))
 		response.InternalServerError().SendResponse(w, r)
 		return
 	}
+
 	response.Created(saved).SendResponse(w, r)
 }
