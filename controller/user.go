@@ -3,6 +3,7 @@ package controller
 import (
 	"erp-2c/lib/response"
 	"erp-2c/lib/sl"
+	"erp-2c/lib/types"
 	"erp-2c/model"
 	"erp-2c/service/use_cases"
 	"log/slog"
@@ -37,7 +38,10 @@ func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, _ := c.services.UserService.GetById(userId)
+	found, err := c.services.UserService.GetById(userId)
+	if err != nil {
+		types.HandleError(err).SendResponse(w, r)
+	}
 	response.OK(found).SendResponse(w, r)
 }
 
@@ -55,10 +59,8 @@ func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
 
 	saved, err := c.services.UserService.Save(userToSave)
 	if err != nil {
-		slog.Error("failed save user", sl.ErrWithOP(err, op))
-		response.InternalServerError().SendResponse(w, r)
+		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-
 	response.Created(saved).SendResponse(w, r)
 }

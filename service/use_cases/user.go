@@ -33,7 +33,7 @@ func (u *UserService) Save(userToSave model.SignUp) (*model.UserDomain, error) {
 
 	saved, err := u.store.UserRepo.Save(userDB)
 	if err != nil {
-		slog.Error("Failed to save user", slog.String("login", userDB.Login), sl.ErrWithOP(err, op))
+		slog.Error("Failed to save user", sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
@@ -46,7 +46,6 @@ func (u *UserService) Save(userToSave model.SignUp) (*model.UserDomain, error) {
 	}
 
 	slog.Info("User created", slog.Int64("id", user.Id))
-
 	return &user, nil
 }
 
@@ -55,7 +54,7 @@ func (u *UserService) GetById(userId int64) (*model.UserDomain, error) {
 
 	found, err := u.store.UserRepo.GetById(userId)
 	if err != nil {
-		slog.Error("failed to find user by id", slog.Int64("User id", userId), sl.ErrWithOP(err, op))
+		slog.Error("failed to find user", sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
@@ -75,7 +74,7 @@ func (u *UserService) GetByLogin(userLogin string) (*model.UserDomain, error) {
 
 	found, err := u.store.UserRepo.GetByLogin(userLogin)
 	if err != nil {
-		slog.Error("failed to find user by login", slog.String("User login", userLogin), sl.ErrWithOP(err, op))
+		slog.Error("failed to find user", sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
