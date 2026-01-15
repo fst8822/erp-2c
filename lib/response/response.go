@@ -12,7 +12,7 @@ import (
 )
 
 type Response struct {
-	Code    int    `json:"code"`
+	Code    int    `json:"-"`
 	Message string `json:"message,omitempty"`
 	Body    any    `json:"body,omitempty"`
 }
@@ -85,7 +85,8 @@ func AlreadyExist(message string) Response {
 
 func InternalServerError() Response {
 	return Response{
-		Code: http.StatusInternalServerError,
+		Code:    http.StatusInternalServerError,
+		Message: "Internal server error",
 	}
 }
 
