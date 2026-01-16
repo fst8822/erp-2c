@@ -11,10 +11,10 @@ type Store struct {
 	ProductRepo ProductRepository
 }
 
-func NewStore(db *sqlx.DB) (*Store, error) {
-	store := &Store{
+func NewStore(db *sqlx.DB) *Store {
+
+	return &Store{
 		UserRepo:    pg.NewUserRepository(db),
 		ProductRepo: pg.NewProductRepository(db),
 	}
-	return store, nil
 }

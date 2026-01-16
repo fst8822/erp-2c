@@ -48,10 +48,7 @@ func run() error {
 		return err
 	}
 
-	storeRepo, err := store.NewStore(db.Pg)
-	if err != nil {
-		return err
-	}
+	storeRepo := store.NewStore(db.Pg)
 
 	serviceManager, err := use_cases.NewManager(storeRepo)
 	if err != nil {
