@@ -26,7 +26,7 @@ func NewAuthService(store *store.Store, userService service.UserService) *AuthSe
 }
 
 func (a *AuthService) SignUp(signUp model.SignUp) (*model.UserDomain, error) {
-	const op = "service.usescases.auth.SignUp"
+	const op = "service.use_cases.auth.SignUp"
 
 	passHash, err := generatePasswordHash(signUp.Password)
 	if err != nil {
@@ -43,7 +43,7 @@ func (a *AuthService) SignUp(signUp model.SignUp) (*model.UserDomain, error) {
 }
 
 func (a *AuthService) SignIn(signIn model.SignIn) (string, error) {
-	const op = "service.usescases.auth.SignIn"
+	const op = "service.use_cases.auth.SignIn"
 
 	userDomain, err := a.userService.GetByLogin(signIn.Login)
 	if err != nil {
@@ -65,7 +65,7 @@ func (a *AuthService) SignIn(signIn model.SignIn) (string, error) {
 }
 
 func generatePasswordHash(password string) (string, error) {
-	const op = "service.usesacses.auth.generatePasswordHash"
+	const op = "service.use_cases.auth.generatePasswordHash"
 
 	b, err := bcrypt.GenerateFromPassword(
 		[]byte(password),
