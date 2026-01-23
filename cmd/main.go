@@ -4,6 +4,7 @@ import (
 	"context"
 	"erp-2c/config"
 	"erp-2c/controller/routers"
+	"erp-2c/lib/sl"
 	"erp-2c/service/use_cases"
 	"erp-2c/store"
 	"erp-2c/store/pg"
@@ -15,7 +16,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -92,11 +92,13 @@ func run(ctx context.Context) error {
 	case <-ctx.Done():
 		slog.Info("Context cancelled")
 	}
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("Shutdown failed, forcing close", sl.Err(err))
 		if closeErr := srv.Close(); closeErr != nil {
+			slog.Error("Forcing close failed", sl.Err(closeErr))
 			return errors.Join(err, closeErr)
 		}
 		return err
