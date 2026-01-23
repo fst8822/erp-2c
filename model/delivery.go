@@ -1,20 +1,43 @@
 package model
 
-import "time"
+import (
+	"erp-2c/lib/types"
+	"strings"
+	"time"
+)
+
+type DeliveryStatus string
+
+func (s DeliveryStatus) ParseDeliverStatus(status string) (DeliveryStatus, error) {
+	switch strings.ToUpper(status) {
+	case "CREATED":
+		return CREATED, nil
+	case "SHIPPED":
+		return SHIPPED, nil
+	case "DELIVERED":
+		return DELIVERED, nil
+	case "CANCELLED":
+		return CANCELLED, nil
+	case "ACCEPTED":
+		return ACCEPTED, nil
+	default:
+		return "", types.NewAppErr(status, types.ErrUnknownStatus)
+	}
+}
 
 const (
-	CREATED   = "CREATED"
-	SHIPPED   = "SHIPPED"
-	DELIVERED = "DELIVERED"
-	CANCELLED = "CANCELLED"
-	ACCEPTED  = "ACCEPTED"
+	CREATED   DeliveryStatus = "CREATED"
+	SHIPPED   DeliveryStatus = "SHIPPED"
+	DELIVERED DeliveryStatus = "DELIVERED"
+	CANCELLED DeliveryStatus = "CANCELLED"
+	ACCEPTED  DeliveryStatus = "ACCEPTED"
 )
 
 type DeliveryDB struct {
-	Id             int64     `db:"id"`
-	RecipientGoods string    `db:"recipient_goods"`
-	StatusDelivery string    `db:"status_delivery"`
-	CreatedAt      time.Time `db:"createdAt"`
+	Id             int64          `db:"id"`
+	RecipientGoods string         `db:"recipient_goods"`
+	StatusDelivery DeliveryStatus `db:"status_delivery"`
+	CreatedAt      time.Time      `db:"createdAt"`
 }
 
 type DeliveryProductDB struct {
@@ -33,7 +56,7 @@ type DeliveryDomain struct {
 	Id             int
 	DeliveryItem   []DeliveryItem
 	RecipientGoods string
-	StatusDelivery string
+	StatusDelivery DeliveryStatus
 	CreatedAt      time.Time
 }
 
