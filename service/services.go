@@ -1,19 +1,25 @@
 package service
 
+import (
+	"erp-2c/model"
+)
+
 type AuthService interface {
-	SignUp()
-	SignIn()
+	SignUp(signUp model.SignUp) (*model.UserDomain, error)
+	SignIn(signIn model.SignIn) (string, error)
 }
 
 type UserService interface {
-	Save()
-	GetById()
-	GetByName()
+	Save(userToSave model.SignUp) (*model.UserDomain, error)
+	GetById(userId int64) (*model.UserDomain, error)
+	GetByLogin(userId string) (*model.UserDomain, error)
 }
+
 type ProductService interface {
-	Save()
-	GetById()
-	GetAll()
-	UpdateById()
-	DeleteById()
+	Save(productToSave model.ProductToSave) (*model.ProductDomain, error)
+	GetById(productId int64) (*model.ProductDomain, error)
+	GetByName(productName string) (*model.ProductDomain, error)
+	GetAll() (*[]model.ProductDomain, error)
+	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
+	DeleteById(productId int64) error
 }
