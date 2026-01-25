@@ -51,7 +51,7 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 				r.Post("/", deliveryController.Save)
 				r.Get("/", deliveryController.GetAll)
 				r.Get("/{id}", deliveryController.GetById)
-				r.Put("/{id}", deliveryController.UpdateByYd)
+				r.Put("/{id}", deliveryController.UpdateById)
 			})
 		})
 	})
