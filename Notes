@@ -490,3 +490,18 @@ func (d *DeliveryDomain) updateTotal() {
 	}
 	d.TotalAmount = total
 }
+
+// ❌ Ошибка 1: Двойной Rollback
+defer tx.Rollback()
+if err := tx.Commit(); err != nil {
+    return err  // Rollback вызовется снова!
+}
+
+// ❌ Ошибка 2: Игнорируем ошибку Rollback
+defer tx.Rollback()  // Ошибка может быть, но мы ее игнорируем
+
+// ❌ Ошибка 3: Rollback после успешного Commit
+if err := tx.Commit(); err != nil {
+    return err
+}
+defer tx.Rollback()  // Слишком поздно!
