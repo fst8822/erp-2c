@@ -1,7 +1,7 @@
 package model
 
 type ProductToSave struct {
-	ProductName  string `json:"product-name" validate:"required"`
+	ProductName  string `json:"product-name" validate:"required,min=1"`
 	ProductGroup string `json:"product-group,omitempty" validate:"omitempty"`
 	Image        []byte `json:"image,omitempty" validate:"omitempty"`
 	Stock        int64  `json:"stock,omitempty" validate:"omitempty"`

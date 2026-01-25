@@ -29,7 +29,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 	saved, err := p.store.ProductRepo.Save(productDB)
 	if err != nil {
 		slog.Error("failed save product",
-			slog.String("product id", productToSave.ProductName), sl.ErrWithOP(err, op))
+			slog.String("product name", productToSave.ProductName), sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func (p *ProductService) GetByName(productName string) (*model.ProductDomain, er
 	return &productDB, nil
 }
 
-func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
+func (p *ProductService) GetAll() ([]model.ProductDomain, error) {
 	const op = "service.use_cases.product.GetAll"
 
 	productsDB, err := p.store.ProductRepo.GetAll()
@@ -107,7 +107,7 @@ func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
 		}
 		productsDomain = append(productsDomain, productDomain)
 	}
-	return &productsDomain, nil
+	return productsDomain, nil
 }
 
 func (p *ProductService) UpdateById(productId int64, productToUpdate model.ProductUpdate) error {
