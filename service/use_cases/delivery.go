@@ -29,3 +29,6 @@ func (d *DeliveryService) GetByStatus(status string) (*model.DeliveryDomain, err
 func (d *DeliveryService) UpdateById(deliveryId int64, status model.UpdateStatus) error {
 	return nil
 }
+func (d *DeliveryService) DeleteById(deliveryId int64) error {
+	return nil
+}

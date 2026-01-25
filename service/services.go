@@ -30,4 +30,5 @@ type DeliveryService interface {
 	GetAll() (*[]model.ProductDomain, error)
 	GetByStatus(status string) (*model.DeliveryDomain, error)
 	UpdateById(deliveryId int64, status model.UpdateStatus) error
+	DeleteById(deliveryId int64) error
 }

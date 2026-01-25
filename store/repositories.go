@@ -19,9 +19,10 @@ type UserRepository interface {
 }
 
 type DeliveryRepository interface {
-	Save(DeliveryToSave model.DeliveryDBProductDB) (*model.DeliveryDBProductDB, error)
-	GetById(deliveryId int64) (*model.DeliveryDBProductDB, error)
+	Save(DeliveryToSave model.DeliveryProductDB) (*model.DeliveryProductDB, error)
+	GetById(deliveryId int64) (*model.DeliveryProductDB, error)
 	GetAll() (*[]model.ProductDomain, error)
-	GetByStatus(status string) (*model.DeliveryDBProductDB, error)
+	GetByStatus(status string) (*model.DeliveryProductDB, error)
 	UpdateById(deliveryId int64, status model.UpdateStatus) error
+	DeleteById(deliveryId int64) error
 }

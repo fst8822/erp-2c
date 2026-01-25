@@ -2,26 +2,17 @@ package model
 
 import (
 	"erp-2c/lib/types"
-	"strings"
 	"time"
 )
 
 type deliveryStatus string
 
-func (s deliveryStatus) IsValid(status string) error {
-	switch strings.ToUpper(status) {
-	case "CREATED":
-		return nil
-	case "SHIPPED":
-		return nil
-	case "DELIVERED":
-		return nil
-	case "CANCELLED":
-		return nil
-	case "ACCEPTED":
+func (s deliveryStatus) IsValid() error {
+	switch s {
+	case CREATED, SHIPPED, DELIVERED, CANCELLED, ACCEPTED:
 		return nil
 	default:
-		return types.NewAppErr(status, types.ErrUnknownStatus)
+		return types.NewAppErr(string(s), types.ErrUnknownStatus)
 	}
 }
 
@@ -36,39 +27,68 @@ const (
 type DeliveryDB struct {
 	Id             int64          `db:"id"`
 	RecipientGoods string         `db:"recipient_goods"`
+	Address        string         `db:"address"`
 	StatusDelivery deliveryStatus `db:"status_delivery"`
-	CreatedAt      time.Time      `db:"createdAt"`
+	CreatedAt      time.Time      `db:"created_at"`
+	TotalAmount    int64          `db:"total_amount"`
 }
 
-type DeliveryDBProductDB struct {
-	Id       int64      `db:"id"`
-	Delivery DeliveryDB `db:"product_id"`
-	Products ProductDB  `db:"delivery_id"`
-	Quantity int64      `db:"quantity"`
+type DeliveryProductDB struct {
+	Id          int64 `db:"id"`
+	DeliveryId  int64 `db:"delivery_id"`
+	ProductId   int64 `db:"product_id"`
+	Quantity    int64 `db:"quantity"`
+	ItemPrice   int64 `db:"item_price"`
+	TotalAmount int64 `db:"total_amount"`
 }
 
 type DeliveryItem struct {
-	Products ProductDomain
-	Quantity int64
+	Product   ProductDomain
+	ItemPrice int64
+	Quantity  int64
+}
+
+func (i *DeliveryItem) TotalAmount() int64 {
+	return i.ItemPrice * i.Quantity
 }
 
 type DeliveryDomain struct {
-	Id             int
-	DeliveryItem   []DeliveryItem
+	Id             int64
+	DeliveryItems  []DeliveryItem
 	RecipientGoods string
+	Address        string
 	StatusDelivery deliveryStatus
 	CreatedAt      time.Time
 }
 
+func (d *DeliveryDomain) CalculateTotal() int64 {
+	var total int64
+	for _, item := range d.DeliveryItems {
+		total += item.TotalAmount()
+	}
+	return total
+}
+
 type DeliveryToSave struct {
-	Items []struct {
-		ProductId int64 `json:"product_id" validate:"required"`
-		Quantity  int64 `json:"quantity" validate:"required"`
-	} `json:"items" validate:"required"`
-	RecipientGoods string `json:"recipient_goods" validate:"required"`
+	Items          []DeliveryItemToSave `json:"items" validate:"required"`
+	RecipientGoods string               `json:"recipient_goods" validate:"required"`
+	Address        string               `json:"address" validate:"required"`
+}
+
+type DeliveryItemToSave struct {
+	ProductId int64 `json:"product_id" validate:"required"`
+	ItemPrice int64 `json:"itemPrice" validate:"required"`
+	Quantity  int64 `json:"quantity" validate:"required"`
 }
 
 type UpdateStatus struct {
-	Id             int64  `json:"id"`
-	StatusDelivery string `json:"status_delivery" validate:"required"`
+	DeliveryId     int64          `json:"id" validate:"required"`
+	StatusDelivery deliveryStatus `json:"status_delivery" validate:"required"`
+}
+
+func (d *DeliveryDomain) MapToDB() *DeliveryDB {
+	return nil
+}
+func (d *DeliveryDB) MapToDomain() *DeliveryDomain {
+	return nil
 }

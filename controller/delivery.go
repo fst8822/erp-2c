@@ -2,8 +2,9 @@ package controller
 
 import (
 	"erp-2c/service/use_cases"
-	"github.com/go-playground/validator/v10"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type DeliveryController struct {
@@ -20,3 +21,4 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request)       
 func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request)    {}
 func (d *DeliveryController) GetAll(w http.ResponseWriter, r *http.Request)     {}
 func (d *DeliveryController) UpdateById(w http.ResponseWriter, r *http.Request) {}
+func (d *DeliveryController) DeleteById(w http.ResponseWriter, r *http.Request) {}
