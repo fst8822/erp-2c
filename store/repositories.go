@@ -17,3 +17,11 @@ type UserRepository interface {
 	GetById(userId int64) (*model.UserDB, error)
 	GetByLogin(userId string) (*model.UserDB, error)
 }
+
+type DeliveryRepository interface {
+	Save(DeliveryToSave model.DeliveryDBProductDB) (*model.DeliveryDBProductDB, error)
+	GetById(deliveryId int64) (*model.DeliveryDBProductDB, error)
+	GetAll() (*[]model.ProductDomain, error)
+	GetByStatus(status string) (*model.DeliveryDBProductDB, error)
+	UpdateById(deliveryId int64, status model.UpdateStatus) error
+}

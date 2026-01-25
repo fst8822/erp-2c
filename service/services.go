@@ -23,3 +23,11 @@ type ProductService interface {
 	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
 	DeleteById(productId int64) error
 }
+
+type DeliveryService interface {
+	Save(DeliveryToSave model.DeliveryToSave) (*model.DeliveryDomain, error)
+	GetById(deliveryId int64) (*model.DeliveryDomain, error)
+	GetAll() (*[]model.ProductDomain, error)
+	GetByStatus(status string) (*model.DeliveryDomain, error)
+	UpdateById(deliveryId int64, status model.UpdateStatus) error
+}

@@ -6,41 +6,41 @@ import (
 	"time"
 )
 
-type DeliveryStatus string
+type deliveryStatus string
 
-func (s DeliveryStatus) ParseDeliverStatus(status string) (DeliveryStatus, error) {
+func (s deliveryStatus) IsValid(status string) error {
 	switch strings.ToUpper(status) {
 	case "CREATED":
-		return CREATED, nil
+		return nil
 	case "SHIPPED":
-		return SHIPPED, nil
+		return nil
 	case "DELIVERED":
-		return DELIVERED, nil
+		return nil
 	case "CANCELLED":
-		return CANCELLED, nil
+		return nil
 	case "ACCEPTED":
-		return ACCEPTED, nil
+		return nil
 	default:
-		return "", types.NewAppErr(status, types.ErrUnknownStatus)
+		return types.NewAppErr(status, types.ErrUnknownStatus)
 	}
 }
 
 const (
-	CREATED   DeliveryStatus = "CREATED"
-	SHIPPED   DeliveryStatus = "SHIPPED"
-	DELIVERED DeliveryStatus = "DELIVERED"
-	CANCELLED DeliveryStatus = "CANCELLED"
-	ACCEPTED  DeliveryStatus = "ACCEPTED"
+	CREATED   deliveryStatus = "CREATED"
+	SHIPPED   deliveryStatus = "SHIPPED"
+	DELIVERED deliveryStatus = "DELIVERED"
+	CANCELLED deliveryStatus = "CANCELLED"
+	ACCEPTED  deliveryStatus = "ACCEPTED"
 )
 
 type DeliveryDB struct {
 	Id             int64          `db:"id"`
 	RecipientGoods string         `db:"recipient_goods"`
-	StatusDelivery DeliveryStatus `db:"status_delivery"`
+	StatusDelivery deliveryStatus `db:"status_delivery"`
 	CreatedAt      time.Time      `db:"createdAt"`
 }
 
-type DeliveryProductDB struct {
+type DeliveryDBProductDB struct {
 	Id       int64      `db:"id"`
 	Delivery DeliveryDB `db:"product_id"`
 	Products ProductDB  `db:"delivery_id"`
@@ -56,7 +56,7 @@ type DeliveryDomain struct {
 	Id             int
 	DeliveryItem   []DeliveryItem
 	RecipientGoods string
-	StatusDelivery DeliveryStatus
+	StatusDelivery deliveryStatus
 	CreatedAt      time.Time
 }
 
@@ -66,5 +66,9 @@ type DeliveryToSave struct {
 		Quantity  int64 `json:"quantity" validate:"required"`
 	} `json:"items" validate:"required"`
 	RecipientGoods string `json:"recipient_goods" validate:"required"`
+}
+
+type UpdateStatus struct {
+	Id             int64  `json:"id"`
 	StatusDelivery string `json:"status_delivery" validate:"required"`
 }
