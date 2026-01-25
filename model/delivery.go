@@ -26,26 +26,25 @@ const (
 
 type DeliveryDB struct {
 	Id             int64          `db:"id"`
-	RecipientGoods string         `db:"recipient_goods"`
+	Recipient      string         `db:"recipient"`
 	Address        string         `db:"address"`
-	StatusDelivery deliveryStatus `db:"status_delivery"`
+	StatusDelivery deliveryStatus `db:"status"`
 	CreatedAt      time.Time      `db:"created_at"`
-	TotalAmount    int64          `db:"total_amount"`
 }
 
 type DeliveryProductDB struct {
 	Id          int64 `db:"id"`
 	DeliveryId  int64 `db:"delivery_id"`
 	ProductId   int64 `db:"product_id"`
-	Quantity    int64 `db:"quantity"`
 	ItemPrice   int64 `db:"item_price"`
+	Quantity    int64 `db:"quantity"`
 	TotalAmount int64 `db:"total_amount"`
 }
 
 type DeliveryItem struct {
-	Product   ProductDomain
-	ItemPrice int64
-	Quantity  int64
+	ProductId int64 `json:"product_id"`
+	ItemPrice int64 `json:"item_price"`
+	Quantity  int64 `json:"quantity"`
 }
 
 func (i *DeliveryItem) TotalAmount() int64 {
@@ -53,12 +52,12 @@ func (i *DeliveryItem) TotalAmount() int64 {
 }
 
 type DeliveryDomain struct {
-	Id             int64
-	DeliveryItems  []DeliveryItem
-	RecipientGoods string
-	Address        string
-	StatusDelivery deliveryStatus
-	CreatedAt      time.Time
+	Id             int64          `json:"id"`
+	DeliveryItems  []DeliveryItem `json:"delivery_items"`
+	Recipient      string         `json:"recipient"`
+	Address        string         `json:"address"`
+	StatusDelivery deliveryStatus `json:"status"`
+	CreatedAt      time.Time      `json:"created_at"`
 }
 
 func (d *DeliveryDomain) CalculateTotal() int64 {
@@ -70,25 +69,59 @@ func (d *DeliveryDomain) CalculateTotal() int64 {
 }
 
 type DeliveryToSave struct {
-	Items          []DeliveryItemToSave `json:"items" validate:"required"`
-	RecipientGoods string               `json:"recipient_goods" validate:"required"`
-	Address        string               `json:"address" validate:"required"`
+	Items     []DeliveryItemToSave `json:"items" validate:"required,min=1"`
+	Recipient string               `json:"recipient" validate:"required,min=1"`
+	Address   string               `json:"address" validate:"required,min=1"`
 }
 
 type DeliveryItemToSave struct {
-	ProductId int64 `json:"product_id" validate:"required"`
-	ItemPrice int64 `json:"itemPrice" validate:"required"`
-	Quantity  int64 `json:"quantity" validate:"required"`
+	ProductId int64 `json:"product_id" validate:"gt=0"`
+	ItemPrice int64 `json:"item_price" validate:"gt=0"`
+	Quantity  int64 `json:"quantity" validate:"gt=0"`
 }
 
 type UpdateStatus struct {
-	DeliveryId     int64          `json:"id" validate:"required"`
-	StatusDelivery deliveryStatus `json:"status_delivery" validate:"required"`
+	DeliveryId     int64          `json:"id" validate:"gt=0"`
+	StatusDelivery deliveryStatus `json:"status" validate:"required,min=1"`
 }
 
-func (d *DeliveryDomain) MapToDB() *DeliveryDB {
-	return nil
+func (d *DeliveryToSave) MapToDomain() *DeliveryDomain {
+	var items = make([]DeliveryItem, 0, len(d.Items))
+	for _, item := range d.Items {
+		items = append(items, DeliveryItem{
+			ProductId: item.ProductId,
+			ItemPrice: item.ItemPrice,
+			Quantity:  item.Quantity,
+		})
+	}
+	return &DeliveryDomain{
+		DeliveryItems:  items,
+		Recipient:      d.Recipient,
+		Address:        d.Address,
+		StatusDelivery: CREATED,
+		CreatedAt:      time.Now(),
+	}
 }
-func (d *DeliveryDB) MapToDomain() *DeliveryDomain {
-	return nil
+
+func (d *DeliveryDomain) MapToDeliveryProducts(productId int64) []DeliveryProductDB {
+	deliveryProductsDB := make([]DeliveryProductDB, 0, len(d.DeliveryItems))
+	for _, item := range d.DeliveryItems {
+		deliveryProductsDB = append(deliveryProductsDB, DeliveryProductDB{
+			DeliveryId:  productId,
+			ProductId:   item.ProductId,
+			ItemPrice:   item.ItemPrice,
+			Quantity:    item.Quantity,
+			TotalAmount: item.TotalAmount(),
+		})
+	}
+	return deliveryProductsDB
+}
+
+func (d *DeliveryDomain) MapToDB() DeliveryDB {
+	return DeliveryDB{
+		Recipient:      d.Recipient,
+		Address:        d.Address,
+		StatusDelivery: d.StatusDelivery,
+		CreatedAt:      d.CreatedAt,
+	}
 }

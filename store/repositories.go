@@ -1,10 +1,14 @@
 package store
 
-import "erp-2c/model"
+import (
+	"database/sql"
+	"erp-2c/model"
+)
 
 type ProductRepository interface {
 	Save(productToSave model.ProductDB) (*model.ProductDB, error)
 	GetById(productId int64) (*model.ProductDB, error)
+	GetExistIds(productIds []int64) ([]int64, error)
 	GetByName(productName string) (*model.ProductDB, error)
 	GetAll() ([]model.ProductDB, error)
 	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
@@ -19,10 +23,11 @@ type UserRepository interface {
 }
 
 type DeliveryRepository interface {
-	Save(DeliveryToSave model.DeliveryProductDB) (*model.DeliveryProductDB, error)
-	GetById(deliveryId int64) (*model.DeliveryProductDB, error)
+	SaveDelivery(tx *sql.Tx, deliveryDB model.DeliveryDB) (*model.DeliveryDB, error)
+	SaveDeliveryProducts(tx *sql.Tx, deliveryProductsDB []model.DeliveryProductDB) error
+	GetById(tx *sql.Tx, deliveryId int64) (*model.DeliveryDB, error)
 	GetAll() (*[]model.ProductDomain, error)
-	GetByStatus(status string) (*model.DeliveryProductDB, error)
-	UpdateById(deliveryId int64, status model.UpdateStatus) error
-	DeleteById(deliveryId int64) error
+	GetByStatus(tx *sql.Tx, status string) (*model.DeliveryDB, error)
+	UpdateById(tx *sql.Tx, deliveryId int64, status model.UpdateStatus) error
+	DeleteById(tx *sql.Tx, deliveryId int64) error
 }
