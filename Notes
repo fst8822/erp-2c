@@ -298,3 +298,195 @@ render.Bind(r, &req)
 2. req.Bind(r)               ← вызывает твой метод валидации
     ↓
 return error (или nil)
+
+
+delivery
+func DeliveryFromDTO(dto DeliveryToSave) (*Delivery, error) {
+	items := make([]DeliveryItem, 0, len(dto.Items))
+
+	for _, i := range dto.Items {
+		item, err := NewDeliveryItem(i.ProductId, i.ItemPrice, i.Quantity)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return NewDelivery(items, dto.RecipientGoods, dto.Address)
+}
+
+func (d *Delivery) ChangeStatus(status DeliveryStatus) error {
+	if err := status.IsValid(); err != nil {
+		return err
+	}
+
+	// пример бизнес-правила
+	if d.status == StatusCancelled {
+		return ErrDeliveryAlreadyCancelled
+	}
+
+	d.status = status
+	return nil
+}
+
+func NewDelivery(
+	items []DeliveryItem,
+	recipientGoods string,
+	address string,
+) (*Delivery, error) {
+
+	if len(items) == 0 {
+		return nil, ErrEmptyDeliveryItems
+	}
+	if recipientGoods == "" {
+		return nil, ErrEmptyRecipient
+	}
+	if address == "" {
+		return nil, ErrEmptyAddress
+	}
+
+	d := &Delivery{
+		items:          items,
+		recipientGoods: recipientGoods,
+		address:        address,
+		status:         StatusCreated,
+		createdAt:      time.Now(),
+	}
+
+	d.recalculateTotal()
+
+	return d, nil
+}
+
+package model
+
+type DeliveryItem struct {
+	ProductID int64
+	ItemPrice int64
+	Quantity  int64
+}
+
+func NewDeliveryItem(
+	productID int64,
+	itemPrice int64,
+	quantity int64,
+) (DeliveryItem, error) {
+
+	if productID <= 0 {
+		return DeliveryItem{}, ErrInvalidProduct
+	}
+	if itemPrice <= 0 {
+		return DeliveryItem{}, ErrInvalidPrice
+	}
+	if quantity <= 0 {
+		return DeliveryItem{}, ErrInvalidQuantity
+	}
+
+	return DeliveryItem{
+		ProductID: productID,
+		ItemPrice: itemPrice,
+		Quantity:  quantity,
+	}, nil
+}
+
+func (i DeliveryItem) Total() int64 {
+	return i.ItemPrice * i.Quantity
+}
+
+package model
+
+import "erp-2c/lib/types"
+
+type DeliveryStatus string
+
+const (
+	StatusCreated   DeliveryStatus = "CREATED"
+	StatusAccepted  DeliveryStatus = "ACCEPTED"
+	StatusShipped   DeliveryStatus = "SHIPPED"
+	StatusDelivered DeliveryStatus = "DELIVERED"
+	StatusCancelled DeliveryStatus = "CANCELLED"
+)
+
+func NewDeliveryStatus(s string) (DeliveryStatus, error) {
+	status := DeliveryStatus(s)
+	if err := status.IsValid(); err != nil {
+		return "", err
+	}
+	return status, nil
+}
+
+func (s DeliveryStatus) IsValid() error {
+	switch s {
+	case StatusCreated, StatusAccepted, StatusShipped, StatusDelivered, StatusCancelled:
+		return nil
+	default:
+		return types.NewAppErr(string(s), types.ErrUnknownStatus)
+	}
+}
+
+///update
+package model
+
+import "time"
+
+// ====================
+// Доменные модели
+// ====================
+type DeliveryItem struct {
+	Product   ProductDomain
+	ItemPrice int64
+	Quantity  int64
+}
+
+func (i *DeliveryItem) TotalAmount() int64 {
+	return i.ItemPrice * i.Quantity
+}
+
+type DeliveryDomain struct {
+	Id             int64
+	DeliveryItems  []DeliveryItem
+	RecipientGoods string
+	Address        string
+	StatusDelivery DeliveryStatus
+	CreatedAt      time.Time
+	TotalAmount    int64
+}
+
+// ====================
+// Методы для работы с товарами
+// ====================
+
+// Добавление товара
+func (d *DeliveryDomain) AddItem(item DeliveryItem) {
+	d.DeliveryItems = append(d.DeliveryItems, item)
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// Удаление товара по индексу
+func (d *DeliveryDomain) RemoveItem(index int) {
+	if index < 0 || index >= len(d.DeliveryItems) {
+		return
+	}
+	d.DeliveryItems = append(d.DeliveryItems[:index], d.DeliveryItems[index+1:]...)
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// Обновление количества/цены товара по индексу
+func (d *DeliveryDomain) UpdateItem(index int, item DeliveryItem) {
+	if index < 0 || index >= len(d.DeliveryItems) {
+		return
+	}
+	d.DeliveryItems[index] = item
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// ====================
+// Внутренний метод для синхронизации суммы
+// ====================
+func (d *DeliveryDomain) updateTotal() {
+	var total int64
+	for _, item := range d.DeliveryItems {
+		total += item.TotalAmount()
+	}
+	d.TotalAmount = total
+}
