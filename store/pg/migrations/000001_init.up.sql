@@ -32,6 +32,7 @@ CREATE TABLE DELIVERY_PRODUCT (
                         unit_price   bigint not null,
                         total_amount bigint not null,
                         FOREIGN KEY (delivery_id) REFERENCES DELIVERY(id),
-                        FOREIGN KEY (product_id) REFERENCES PRODUCTS(id)
+                        FOREIGN KEY (product_id) REFERENCES PRODUCTS(id),
+                        UNIQUE (delivery_id, product_id)
 )
 
