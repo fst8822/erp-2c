@@ -5,13 +5,10 @@ import (
 	"erp-2c/model"
 	"erp-2c/store"
 	"log/slog"
-
-	"github.com/go-playground/validator/v10"
 )
 
 type UserService struct {
-	store    *store.Store
-	validate *validator.Validate
+	store *store.Store
 }
 
 func NewUserService(store *store.Store) *UserService {
