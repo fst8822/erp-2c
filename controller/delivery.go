@@ -8,7 +8,9 @@ import (
 	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 )
@@ -46,7 +48,23 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 	response.Created(saved)
 
 }
-func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request)    {}
+func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request) {
+	const op = "control.delivery.GetById"
+
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		slog.Error("failed convert str to int64", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid path variable").SendResponse(w, r)
+		return
+	}
+	found, err := d.services.DeliveryService.GetById(id)
+	if err != nil {
+		types.HandleError(err).SendResponse(w, r)
+		return
+	}
+	response.OK(found).SendResponse(w, r)
+}
 func (d *DeliveryController) GetAll(w http.ResponseWriter, r *http.Request)     {}
 func (d *DeliveryController) UpdateById(w http.ResponseWriter, r *http.Request) {}
 func (d *DeliveryController) DeleteById(w http.ResponseWriter, r *http.Request) {}

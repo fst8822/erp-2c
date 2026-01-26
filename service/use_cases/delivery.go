@@ -9,7 +9,8 @@ import (
 	"erp-2c/store"
 	"errors"
 	"fmt"
-	"log/slog"
+
+	"golang.org/x/exp/slog"
 )
 
 type DeliveryService struct {
@@ -21,16 +22,25 @@ func NewDeliveryService(repo *store.Store) *DeliveryService {
 }
 
 func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.DeliveryDomain, error) {
-	const op = "control.delivery.Save"
+	const op = "service.use_cases.delivery.Save"
+	sLogger := slog.With("op", op)
+	sLogger.Info("Begin save delivery.", slog.Any("delivery", deliveryToSave))
 
 	tx, err := d.repo.BeginTx(context.Background())
 	if err != nil {
-		slog.Error("failed get tx", sl.ErrWithOP(err, op))
+		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
 	}
+	sLogger.Info("Open transaction")
+
 	defer func() {
-		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			slog.Error("rollback failed", sl.ErrWithOP(err, op))
+		err := tx.Rollback()
+		switch {
+		case err == nil:
+			sLogger.Info("transaction rolled back")
+		case errors.Is(err, sql.ErrTxDone):
+		default:
+			sLogger.Error("rollback failed", sl.Err(err))
 		}
 	}()
 
@@ -41,13 +51,13 @@ func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.Deli
 
 	foundIds, err := d.repo.ProductRepo.GetExistIds(tx, idsToCheck)
 	if err != nil {
-		slog.Error("failed check existing products", sl.ErrWithOP(err, op))
+		sLogger.Error("failed check existing products", sl.Err(err))
 		return nil, err
 	}
+
 	missingIds := findMissingIds(idsToCheck, foundIds)
 	if len(missingIds) > 0 {
-		slog.Warn("No product with ids found",
-			slog.String("op", op),
+		sLogger.Warn("No found product with ids ",
 			slog.Any("missing ids", missingIds))
 
 		return nil, types.NewAppErr(
@@ -60,27 +70,39 @@ func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.Deli
 
 	saved, err := d.repo.Delivery.SaveDelivery(tx, deliveryDB)
 	if err != nil {
-		slog.Error("failed save delivery", sl.ErrWithOP(err, op))
+		sLogger.Error("failed save delivery", sl.Err(err))
 		return nil, err
 	}
+	slog.Info("Saved delivery", slog.Int64("deliveryId", saved.Id))
 
-	deliveryProductsDB := deliveryDomain.MapToDeliveryProducts(saved.Id)
-
+	deliveryProductsDB := deliveryDomain.MapToDeliveryProductsDB(saved.Id)
 	if err := d.repo.Delivery.SaveDeliveryProducts(tx, deliveryProductsDB); err != nil {
-		slog.Error("failed save deliveryProductsDB", sl.ErrWithOP(err, op))
+		slog.Error("failed save deliveryProductsDB", sl.Err(err))
 		return nil, err
 	}
+	slog.Info("Saved deliveryProductsDB")
 	if err := tx.Commit(); err != nil {
-		slog.Error("failed commit tx", sl.ErrWithOP(err, op))
+		slog.Error("failed commit tx", sl.Err(err))
 		return nil, err
 	}
+	sLogger.Info("Commit transaction")
 	deliveryDomain.Id = saved.Id
 
 	return deliveryDomain, nil
 }
 
 func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryDomain, error) {
-	return nil, nil
+	const op = "service.use_cases.delivery.GetById"
+	sLogger := slog.With("op", op, "deliveryId", deliveryId)
+
+	foundDB, err := d.repo.Delivery.GetById(nil, deliveryId)
+	if err != nil {
+		sLogger.Error("failed to find delivery", slog.Int64("deliveryId", deliveryId), sl.Err(err))
+		return nil, err
+	}
+	foundDomain := foundDB.MapToDomain()
+	sLogger.Info("found delivery")
+	return &foundDomain, nil
 }
 func (d *DeliveryService) GetAll() ([]model.DeliveryDomain, error) {
 	return nil, nil

@@ -1,8 +1,10 @@
 package pg
 
 import (
+	"database/sql"
 	"erp-2c/lib/types"
 	"erp-2c/model"
+	"errors"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -37,10 +39,20 @@ func (d *DeliveryRepository) SaveDelivery(tx *sqlx.Tx, deliveryDB model.Delivery
 }
 
 func (d *DeliveryRepository) GetById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryDB, error) {
-	return nil, nil
+	var delivery model.DeliveryDB
+	err := d.db.Get(&delivery, "SELECT * FROM delivery WHERE id = $1", deliveryId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, types.NewAppErr(fmt.Sprintf("delivery not found"),
+				types.ErrNotFound)
+		}
+		return nil, types.NewAppErr("inspected SQL error",
+			fmt.Errorf("%w: %w", types.ErrInspectedSQL, err))
+	}
+	return &delivery, nil
 }
 
-func (d *DeliveryRepository) GetAll() (*[]model.ProductDomain, error) {
+func (d *DeliveryRepository) GetAll(tx *sqlx.Tx) (*[]model.ProductDomain, error) {
 	return nil, nil
 }
 

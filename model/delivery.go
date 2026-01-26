@@ -103,7 +103,7 @@ func (d *DeliveryToSave) MapToDomain() *DeliveryDomain {
 	}
 }
 
-func (d *DeliveryDomain) MapToDeliveryProducts(productId int64) []DeliveryProductDB {
+func (d *DeliveryDomain) MapToDeliveryProductsDB(productId int64) []DeliveryProductDB {
 	deliveryProductsDB := make([]DeliveryProductDB, 0, len(d.DeliveryItems))
 	for _, item := range d.DeliveryItems {
 		deliveryProductsDB = append(deliveryProductsDB, DeliveryProductDB{
@@ -119,6 +119,15 @@ func (d *DeliveryDomain) MapToDeliveryProducts(productId int64) []DeliveryProduc
 
 func (d *DeliveryDomain) MapToDB() DeliveryDB {
 	return DeliveryDB{
+		Recipient:      d.Recipient,
+		Address:        d.Address,
+		StatusDelivery: d.StatusDelivery,
+		CreatedAt:      d.CreatedAt,
+	}
+}
+
+func (d *DeliveryDB) MapToDomain() DeliveryDomain {
+	return DeliveryDomain{
 		Recipient:      d.Recipient,
 		Address:        d.Address,
 		StatusDelivery: d.StatusDelivery,
