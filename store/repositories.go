@@ -27,7 +27,7 @@ type DeliveryRepository interface {
 	SaveDelivery(tx *sqlx.Tx, deliveryDB model.DeliveryDB) (*model.DeliveryDB, error)
 	SaveDeliveryProducts(tx *sqlx.Tx, deliveryProductsDB []model.DeliveryProductDB) error
 	GetById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryDB, error)
-	GetAll() (*[]model.ProductDomain, error)
+	GetAll(tx *sqlx.Tx) (*[]model.ProductDomain, error)
 	GetByStatus(tx *sqlx.Tx, status string) (*model.DeliveryDB, error)
 	UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error
 	DeleteById(tx *sqlx.Tx, deliveryId int64) error
