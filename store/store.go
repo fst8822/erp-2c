@@ -24,10 +24,11 @@ func NewStore(db *sqlx.DB) *Store {
 		UserRepo:    pg.NewUserRepository(db),
 		ProductRepo: pg.NewProductRepository(db),
 		Delivery:    pg.NewDeliveryRepository(db),
+		db:          db,
 	}
 }
 
-func (s Store) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+func (s *Store) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
 	const op = "store.store.BeginTx"
 
 	tx, err := s.db.BeginTxx(ctx, &sql.TxOptions{
@@ -35,7 +36,7 @@ func (s Store) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
 		ReadOnly:  false,
 	})
 	if err != nil {
-		slog.Error("failed save delivery", sl.ErrWithOP(err, op))
+		slog.Error("failed to begin transaction", sl.ErrWithOP(err, op))
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	return tx, nil

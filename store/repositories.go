@@ -9,7 +9,7 @@ import (
 type ProductRepository interface {
 	Save(productToSave model.ProductDB) (*model.ProductDB, error)
 	GetById(productId int64) (*model.ProductDB, error)
-	GetExistIds(productIds []int64) ([]int64, error)
+	GetExistIds(tx *sqlx.Tx, productIds []int64) ([]int64, error)
 	GetByName(productName string) (*model.ProductDB, error)
 	GetAll() ([]model.ProductDB, error)
 	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
