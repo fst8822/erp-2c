@@ -55,6 +55,7 @@ func (p *ProductRepository) GetById(productId int64) (*model.ProductDB, error) {
 	}
 	return productDB, nil
 }
+
 func (p *ProductRepository) GetExistIds(productIds []int64) ([]int64, error) {
 	var foundIds []int64
 	err := p.db.Select(&foundIds, "Select id FROM products where id = ANY($1)", pq.Array(productIds))
