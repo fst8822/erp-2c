@@ -36,7 +36,7 @@ type DeliveryProductDB struct {
 	Id          int64 `db:"id"`
 	DeliveryId  int64 `db:"delivery_id"`
 	ProductId   int64 `db:"product_id"`
-	ItemPrice   int64 `db:"item_price"`
+	ItemPrice   int64 `db:"unit_price"`
 	Quantity    int64 `db:"quantity"`
 	TotalAmount int64 `db:"total_amount"`
 }

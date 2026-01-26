@@ -23,7 +23,7 @@ func NewDeliveryService(repo *store.Store) *DeliveryService {
 func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.DeliveryDomain, error) {
 	const op = "control.delivery.Save"
 
-	tx, err := d.repo.BeginTxx(context.Background())
+	tx, err := d.repo.BeginTx(context.Background())
 	if err != nil {
 		slog.Error("failed get tx", sl.ErrWithOP(err, op))
 		return nil, err
@@ -39,7 +39,7 @@ func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.Deli
 		idsToCheck = append(idsToCheck, item.ProductId)
 	}
 
-	foundIds, err := d.repo.ProductRepo.GetExistIds(idsToCheck)
+	foundIds, err := d.repo.ProductRepo.GetExistIds(tx, idsToCheck)
 	if err != nil {
 		slog.Error("failed check existing products", sl.ErrWithOP(err, op))
 		return nil, err
@@ -47,7 +47,7 @@ func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.Deli
 	missingIds := findMissingIds(idsToCheck, foundIds)
 	if len(missingIds) > 0 {
 		slog.Warn("No product with ids found",
-			missingIds, slog.String("op", op),
+			slog.String("op", op),
 			slog.Any("missing ids", missingIds))
 
 		return nil, types.NewAppErr(
