@@ -505,3 +505,23 @@ if err := tx.Commit(); err != nil {
     return err
 }
 defer tx.Rollback()  // Слишком поздно!
+
+
+committed := false
+
+defer func() {
+    if committed {
+        return
+    }
+
+    if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+        sLogger.Error("rollback failed", sl.Err(err))
+    } else {
+        sLogger.Debug("transaction rolled back")
+    }
+}()
+
+if err := tx.Commit(); err != nil {
+    return err
+}
+committed = true
