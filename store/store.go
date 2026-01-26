@@ -27,10 +27,10 @@ func NewStore(db *sqlx.DB) *Store {
 	}
 }
 
-func (s Store) BeginTx(ctx context.Context) (*sql.Tx, error) {
+func (s Store) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
 	const op = "store.store.BeginTx"
 
-	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{
+	tx, err := s.db.BeginTxx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelReadCommitted,
 		ReadOnly:  false,
 	})

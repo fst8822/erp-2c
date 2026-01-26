@@ -8,6 +8,7 @@ import (
 	"erp-2c/model"
 	"erp-2c/store"
 	"errors"
+	"fmt"
 	"log/slog"
 )
 
@@ -22,14 +23,20 @@ func NewDeliveryService(repo *store.Store) *DeliveryService {
 func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.DeliveryDomain, error) {
 	const op = "control.delivery.Save"
 
-	tx, err := d.repo.BeginTx(context.Background())
+	tx, err := d.repo.BeginTxx(context.Background())
 	if err != nil {
 		slog.Error("failed get tx", sl.ErrWithOP(err, op))
 		return nil, err
 	}
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			slog.Error("rollback failed", sl.ErrWithOP(err, op))
+		}
+	}()
+
 	idsToCheck := make([]int64, 0, len(deliveryToSave.Items))
-	for index, item := range deliveryToSave.Items {
-		idsToCheck[index] = item.ProductId
+	for _, item := range deliveryToSave.Items {
+		idsToCheck = append(idsToCheck, item.ProductId)
 	}
 
 	foundIds, err := d.repo.ProductRepo.GetExistIds(idsToCheck)
@@ -42,17 +49,14 @@ func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.Deli
 		slog.Warn("No product with ids found",
 			missingIds, slog.String("op", op),
 			slog.Any("missing ids", missingIds))
-		return nil, types.NewAppErr("Products not found", types.ErrNotFound)
+
+		return nil, types.NewAppErr(
+			fmt.Sprintf("Products with ids %v not found",
+				missingIds), types.ErrNotFound)
 	}
 
 	deliveryDomain := deliveryToSave.MapToDomain()
 	deliveryDB := deliveryDomain.MapToDB()
-
-	defer func() {
-		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			slog.Error("rollback failed", sl.ErrWithOP(err, op))
-		}
-	}()
 
 	saved, err := d.repo.Delivery.SaveDelivery(tx, deliveryDB)
 	if err != nil {
@@ -75,20 +79,6 @@ func (d *DeliveryService) Save(deliveryToSave model.DeliveryToSave) (*model.Deli
 	return deliveryDomain, nil
 }
 
-func findMissingIds(checkIds []int64, foundIds []int64) []int64 {
-	foundMap := make(map[int64]bool, len(foundIds))
-	for _, id := range foundIds {
-		foundMap[id] = true
-	}
-	missingIds := make([]int64, 0, len(checkIds))
-	for _, id := range checkIds {
-		if !foundMap[id] {
-			missingIds = append(missingIds, id)
-		}
-	}
-	return missingIds
-}
-
 func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryDomain, error) {
 	return nil, nil
 }
@@ -104,4 +94,18 @@ func (d *DeliveryService) UpdateById(deliveryId int64, status model.UpdateStatus
 }
 func (d *DeliveryService) DeleteById(deliveryId int64) error {
 	return nil
+}
+
+func findMissingIds(checkIds []int64, foundIds []int64) []int64 {
+	foundMap := make(map[int64]bool, len(foundIds))
+	for _, id := range foundIds {
+		foundMap[id] = true
+	}
+	missingIds := make([]int64, 0, len(checkIds))
+	for _, id := range checkIds {
+		if !foundMap[id] {
+			missingIds = append(missingIds, id)
+		}
+	}
+	return missingIds
 }
