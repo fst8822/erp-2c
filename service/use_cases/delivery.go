@@ -21,7 +21,7 @@ func NewDeliveryService(repo *store.Store) *DeliveryService {
 	return &DeliveryService{repo: repo}
 }
 
-func (d *DeliveryService) Save(delivery model.DeliveryDomain) (*model.DeliveryDomain, error) {
+func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error) {
 	const op = "service.use_cases.delivery.Save"
 	sLogger := slog.With("op", op)
 	sLogger.Info("Begin save delivery.", slog.Any("delivery", delivery))
@@ -46,7 +46,7 @@ func (d *DeliveryService) Save(delivery model.DeliveryDomain) (*model.DeliveryDo
 
 	idsToCheck := make([]int64, 0, len(delivery.Items))
 	for _, item := range delivery.Items {
-		idsToCheck = append(idsToCheck, item.ProductId)
+		idsToCheck = append(idsToCheck, item.ProductID)
 	}
 
 	foundIds, err := d.repo.ProductRepo.GetExistIds(tx, idsToCheck)
@@ -66,24 +66,24 @@ func (d *DeliveryService) Save(delivery model.DeliveryDomain) (*model.DeliveryDo
 	}
 
 	deliveryWithItemsDB := delivery.MapToDBWithItems()
-	deliveryDB, err := d.repo.Delivery.SaveDeliveryWithProducts(tx, deliveryWithItemsDB)
+	saved, err := d.repo.Delivery.SaveWithItems(tx, deliveryWithItemsDB)
 	if err != nil {
 		sLogger.Error("failed save delivery", sl.Err(err))
 		return nil, err
 	}
-	slog.Info("Saved delivery", slog.Int64("deliveryId", deliveryDB.ID))
+	slog.Info("Saved delivery", slog.Int64("deliveryId", saved.ID))
 
 	if err := tx.Commit(); err != nil {
 		slog.Error("failed commit tx", sl.Err(err))
 		return nil, err
 	}
 	sLogger.Info("Commit transaction")
-	delivery.ID = deliveryDB.ID
+	delivery.ID = saved.ID
 
 	return &delivery, nil
 }
 
-func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryDomain, error) {
+func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryItemsDomain, error) {
 	const op = "service.use_cases.delivery.GetWithItemsById"
 	sLogger := slog.With("op", op, "deliveryId", deliveryId)
 
@@ -92,6 +92,8 @@ func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryDomain, erro
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
 	}
+	sLogger.Info("Open transaction")
+
 	defer func() {
 		err := tx.Rollback()
 		switch {
@@ -103,34 +105,114 @@ func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryDomain, erro
 		}
 	}()
 
-	sLogger.Info("Open transaction")
-
 	deliveryItemsDB, err := d.repo.Delivery.GetWithItemsById(tx, deliveryId)
 	if err != nil {
 		sLogger.Error("failed to find delivery", sl.Err(err))
 		return nil, err
 	}
+	sLogger.Info("found delivery successful")
+
 	if err := tx.Commit(); err != nil {
 		slog.Error("failed commit tx", sl.Err(err))
 		return nil, err
 	}
 	sLogger.Info("Commit transaction")
 
-	foundDomain := deliveryItemsDB.MapToDomain()
-	sLogger.Info("found delivery")
+	domain := deliveryItemsDB.MapToDomain()
+	return &domain, nil
+}
 
-	return &foundDomain, nil
-}
-func (d *DeliveryService) GetAll() ([]model.DeliveryDomain, error) {
-	return nil, nil
+func (d *DeliveryService) GetAll() (*model.DeliveryItemListDomain, error) {
+	const op = "control.delivery.GetAll"
+	sLogger := slog.With("op", op)
 
+	tx, err := d.repo.BeginTx(context.Background())
+	if err != nil {
+		sLogger.Error("failed get tx", sl.Err(err))
+		return nil, err
+	}
+	sLogger.Info("Open transaction")
+
+	defer func() {
+		err := tx.Rollback()
+		switch {
+		case err == nil:
+			sLogger.Info("transaction rolled back")
+		case errors.Is(err, sql.ErrTxDone):
+		default:
+			sLogger.Error("rollback failed", sl.Err(err))
+		}
+	}()
+
+	deliveryListDB, err := d.repo.Delivery.GetAll(tx)
+	if err != nil {
+		sLogger.Error("failed to find deliveries", sl.Err(err))
+		return nil, err
+	}
+	sLogger.Info("found deliveries successful")
+
+	if err := tx.Commit(); err != nil {
+		slog.Error("failed commit tx", sl.Err(err))
+		return nil, err
+	}
+	sLogger.Info("Commit transaction")
+
+	groupedDB := groupItemsByDeliveryId(*deliveryListDB)
+	var deliveryItemList model.DeliveryItemListDomain
+	for _, d := range groupedDB {
+		deliveryItemList.DeliveryItemsDomain = append(deliveryItemList.DeliveryItemsDomain, d.MapToDomain())
+	}
+	return &deliveryItemList, nil
 }
-func (d *DeliveryService) GetByStatus(status string) (*model.DeliveryDomain, error) {
-	return nil, nil
+
+func (d *DeliveryService) GetByStatus(status string) (*model.DeliveryItemListDomain, error) {
+
+	const op = "service.use_cases.delivery.GetByStatus"
+	sLogger := slog.With("op", op, "status", status)
+
+	tx, err := d.repo.BeginTx(context.Background())
+	if err != nil {
+		sLogger.Error("failed get tx", sl.Err(err))
+		return nil, err
+	}
+	sLogger.Info("Open transaction")
+
+	defer func() {
+		err := tx.Rollback()
+		switch {
+		case err == nil:
+			sLogger.Info("transaction rolled back")
+		case errors.Is(err, sql.ErrTxDone):
+		default:
+			sLogger.Error("rollback failed", sl.Err(err))
+		}
+	}()
+
+	deliveryListDB, err := d.repo.Delivery.GetWithItemsByStatus(tx, status)
+	if err != nil {
+		sLogger.Error("failed to find delivery", sl.Err(err))
+		return nil, err
+	}
+	sLogger.Info("found delivery successful")
+
+	if err := tx.Commit(); err != nil {
+		slog.Error("failed commit tx", sl.Err(err))
+		return nil, err
+	}
+	sLogger.Info("Commit transaction")
+
+	groupedDB := groupItemsByDeliveryId(*deliveryListDB)
+	var deliveryItemList model.DeliveryItemListDomain
+	for _, d := range groupedDB {
+		deliveryItemList.DeliveryItemsDomain = append(deliveryItemList.DeliveryItemsDomain, d.MapToDomain())
+	}
+	return &deliveryItemList, nil
 }
+
 func (d *DeliveryService) UpdateById(deliveryId int64, status model.UpdateStatus) error {
 	return nil
 }
+
 func (d *DeliveryService) DeleteById(deliveryId int64) error {
 	return nil
 }
@@ -147,4 +229,20 @@ func findMissingIds(checkIds []int64, foundIds []int64) []int64 {
 		}
 	}
 	return missingIds
+}
+
+func groupItemsByDeliveryId(deliveryListDB model.DeliverListDB) []model.DeliveryWithItemsDB {
+	mapItem := make(map[int64][]model.ItemsDB)
+	for _, v := range deliveryListDB.ItemsDB {
+		mapItem[v.DeliveryID] = append(mapItem[v.DeliveryID], v)
+	}
+
+	var deliveryWithItemsDB []model.DeliveryWithItemsDB
+	for _, v := range deliveryListDB.DeliveriesDB {
+		deliveryWithItemsDB = append(deliveryWithItemsDB, model.DeliveryWithItemsDB{
+			DeliveryDB:      v,
+			DeliveryItemsDB: mapItem[v.ID],
+		})
+	}
+	return deliveryWithItemsDB
 }

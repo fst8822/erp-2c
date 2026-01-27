@@ -32,7 +32,7 @@ type DeliveryDB struct {
 	CreatedAt time.Time      `db:"created_at"`
 }
 
-type DeliveryItemsDB struct {
+type ItemsDB struct {
 	ID         int64 `db:"id"`
 	DeliveryID int64 `db:"delivery_id"`
 	ProductID  int64 `db:"product_id"`
@@ -40,36 +40,54 @@ type DeliveryItemsDB struct {
 	Quantity   int64 `db:"quantity"`
 }
 
-type DeliveryWithItems struct {
+type DeliveryWithItemsDB struct {
 	DeliveryDB      DeliveryDB
-	DeliveryItemsDB []DeliveryItemsDB
+	DeliveryItemsDB []ItemsDB
 }
 
-type DeliveryItemDomain struct {
-	ProductId int64 `json:"product_id"`
-	ItemPrice int64 `json:"item_price"`
-	Quantity  int64 `json:"quantity"`
+type DeliverListDB struct {
+	DeliveriesDB []DeliveryDB
+	ItemsDB      []ItemsDB
 }
 
-func (i *DeliveryItemDomain) totalAmount() int64 {
-	return i.ItemPrice * i.Quantity
+type DeliverDomain struct {
+	ID            int64          `json:"id"`
+	Recipient     string         `json:"recipient"`
+	Address       string         `json:"address"`
+	Status        deliveryStatus `json:"status"`
+	CreatedAt     time.Time      `json:"created_at"`
+	DeliverAmount int64          `json:"deliver_amount"`
 }
 
-type DeliveryDomain struct {
-	ID        int64                `json:"id"`
-	Recipient string               `json:"recipient"`
-	Address   string               `json:"address"`
-	Status    deliveryStatus       `json:"status"`
-	CreatedAt time.Time            `json:"created_at"`
-	Items     []DeliveryItemDomain `json:"delivery_items"`
+type ItemDomain struct {
+	DeliveryID int64 `json:"-"`
+	ProductID  int64 `json:"product_id"`
+	ItemPrice  int64 `json:"item_price"`
+	Quantity   int64 `json:"quantity"`
+	ItemAmount int64 `json:"item_amount"`
 }
 
-func (d *DeliveryDomain) CalculateTotal() int64 {
+func (i *ItemDomain) totalAmount() int64 {
+	res := i.ItemPrice * i.Quantity
+	i.ItemAmount = res
+	return res
+}
+
+type DeliveryItemsDomain struct {
+	DeliverDomain `json:"deliver_domain"`
+	Items         []ItemDomain `json:"items"`
+}
+
+type DeliveryItemListDomain struct {
+	DeliveryItemsDomain []DeliveryItemsDomain `json:"delivery_items_list"`
+}
+
+func (i *DeliveryItemsDomain) CalculateTotalAmount() {
 	var total int64
-	for _, item := range d.Items {
+	for _, item := range i.Items {
 		total += item.totalAmount()
 	}
-	return total
+	i.DeliverAmount = total
 }
 
 type DeliveryToSave struct {
@@ -89,76 +107,73 @@ type UpdateStatus struct {
 	Status     deliveryStatus `json:"status" validate:"required,min=1"`
 }
 
-func (d *DeliveryToSave) MapToDomain() DeliveryDomain {
-	var items = make([]DeliveryItemDomain, 0, len(d.Items))
-	for _, item := range d.Items {
-		items = append(items, DeliveryItemDomain{
-			ProductId: item.ProductId,
-			ItemPrice: item.ItemPrice,
-			Quantity:  item.Quantity,
-		})
-	}
-	return DeliveryDomain{
-		Items:     items,
-		Recipient: d.Recipient,
-		Address:   d.Address,
-		Status:    CREATED,
-		CreatedAt: time.Now(),
-	}
-}
+func (d *DeliveryToSave) MapToDomain() DeliveryItemsDomain {
+	var items = make([]ItemDomain, 0, len(d.Items))
 
-func (d *DeliveryDomain) MapToDB() DeliveryDB {
-	return DeliveryDB{
-		Recipient: d.Recipient,
-		Address:   d.Address,
-		Status:    d.Status,
-		CreatedAt: d.CreatedAt,
-	}
-}
-func (d *DeliveryDomain) MapToDBWithItems() DeliveryWithItems {
-	var items = make([]DeliveryItemsDB, 0, len(d.Items))
 	for _, item := range d.Items {
-		items = append(items, DeliveryItemsDB{
+		itemDomain := ItemDomain{
 			ProductID: item.ProductId,
 			ItemPrice: item.ItemPrice,
 			Quantity:  item.Quantity,
-		})
+		}
+		itemDomain.totalAmount()
+		items = append(items, itemDomain)
 	}
-	return DeliveryWithItems{
-		DeliveryDB: DeliveryDB{
+	delivery := DeliveryItemsDomain{
+		DeliverDomain: DeliverDomain{
 			Recipient: d.Recipient,
 			Address:   d.Address,
-			Status:    d.Status,
-			CreatedAt: d.CreatedAt,
+			Status:    CREATED,
+			CreatedAt: time.Now(),
+		},
+		Items: items,
+	}
+	delivery.CalculateTotalAmount()
+	return delivery
+}
+
+func (i *DeliveryItemsDomain) MapToDBWithItems() DeliveryWithItemsDB {
+	var items = make([]ItemsDB, 0, len(i.Items))
+	for _, item := range i.Items {
+		items = append(items, ItemsDB{
+			ProductID: item.ProductID,
+			ItemPrice: item.ItemPrice,
+			Quantity:  item.Quantity,
+		})
+	}
+	return DeliveryWithItemsDB{
+		DeliveryDB: DeliveryDB{
+			Recipient: i.Recipient,
+			Address:   i.Address,
+			Status:    i.Status,
+			CreatedAt: i.CreatedAt,
 		},
 		DeliveryItemsDB: items,
 	}
 }
 
-func (d *DeliveryDB) MapToDomain() DeliveryDomain {
-	return DeliveryDomain{
-		Recipient: d.Recipient,
-		Address:   d.Address,
-		Status:    d.Status,
-		CreatedAt: d.CreatedAt,
-	}
-}
-
-func (d *DeliveryWithItems) MapToDomain() DeliveryDomain {
-	var items = make([]DeliveryItemDomain, 0, len(d.DeliveryItemsDB))
+func (d *DeliveryWithItemsDB) MapToDomain() DeliveryItemsDomain {
+	var items = make([]ItemDomain, 0, len(d.DeliveryItemsDB))
 	for _, item := range d.DeliveryItemsDB {
-		items = append(items, DeliveryItemDomain{
-			ProductId: item.ProductID,
-			ItemPrice: item.ItemPrice,
-			Quantity:  item.Quantity,
-		})
+		itemDomain := ItemDomain{
+			DeliveryID: item.DeliveryID,
+			ProductID:  item.ProductID,
+			ItemPrice:  item.ItemPrice,
+			Quantity:   item.Quantity,
+		}
+		itemDomain.totalAmount()
+		items = append(items, itemDomain)
 	}
-	return DeliveryDomain{
-		ID:        d.DeliveryDB.ID,
-		Recipient: d.DeliveryDB.Recipient,
-		Address:   d.DeliveryDB.Address,
-		Status:    d.DeliveryDB.Status,
-		CreatedAt: d.DeliveryDB.CreatedAt,
-		Items:     items,
+	delivery := DeliveryItemsDomain{
+		DeliverDomain: DeliverDomain{
+			ID:        d.DeliveryDB.ID,
+			Recipient: d.DeliveryDB.Recipient,
+			Address:   d.DeliveryDB.Address,
+			Status:    d.DeliveryDB.Status,
+			CreatedAt: d.DeliveryDB.CreatedAt,
+		},
+		Items: items,
 	}
+	delivery.CalculateTotalAmount()
+	return delivery
 }
