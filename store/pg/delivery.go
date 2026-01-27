@@ -5,7 +5,6 @@ import (
 	"erp-2c/lib/types"
 	"erp-2c/model"
 	"errors"
-	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -18,41 +17,64 @@ func NewDeliveryRepository(db *sqlx.DB) *DeliveryRepository {
 	return &DeliveryRepository{db: db}
 }
 
-func (d *DeliveryRepository) SaveDelivery(tx *sqlx.Tx, deliveryDB model.DeliveryDB) (*model.DeliveryDB, error) {
-	query := `INSERT INTO delivery(recipient, address, status, created_at)  
-			  VALUES ($1, $2, $3, $4) RETURNING id`
+func (d *DeliveryRepository) SaveDeliveryWithProducts(
+	tx *sqlx.Tx, deliveryWithItems model.DeliveryWithItems) (*model.DeliveryDB, error) {
 
-	err := tx.QueryRow(
-		query,
-		deliveryDB.Recipient,
-		deliveryDB.Address,
-		deliveryDB.StatusDelivery,
-		deliveryDB.CreatedAt,
-	).Scan(&deliveryDB.Id)
+	queryOne := `INSERT INTO delivery(recipient, address, status, created_at)  
+			  		VALUES ($1, $2, $3, $4) RETURNING id`
+
+	err := tx.QueryRowx(
+		queryOne,
+		deliveryWithItems.DeliveryDB.Recipient,
+		deliveryWithItems.DeliveryDB.Address,
+		deliveryWithItems.DeliveryDB.Status,
+		deliveryWithItems.DeliveryDB.CreatedAt,
+	).Scan(&deliveryWithItems.DeliveryDB.ID)
 
 	if err != nil {
-		return nil, types.NewAppErr("inspected SQL error",
-			fmt.Errorf("failed to insert delivery %w: %w", err, types.ErrInspectedSQL))
+		return nil, types.NewAppErr("inspected SQL error, failed to insert delivery",
+			errors.Join(err, types.ErrInspectedSQL))
 	}
 
-	return &deliveryDB, nil
+	queryTwo := `INSERT INTO delivery_items(delivery_id, product_id, quantity, item_price)
+			    	VALUES (:delivery_id, :product_id, :quantity, :item_price)`
+
+	for i := range deliveryWithItems.DeliveryItemsDB {
+		deliveryWithItems.DeliveryItemsDB[i].DeliveryID = deliveryWithItems.DeliveryDB.ID
+	}
+	_, err = tx.NamedExec(queryTwo, deliveryWithItems.DeliveryItemsDB)
+	if err != nil {
+		return nil, types.NewAppErr("inspected SQL error, failed to insert delivery items",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+
+	return &deliveryWithItems.DeliveryDB, nil
 }
 
-func (d *DeliveryRepository) GetById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryDB, error) {
-	var delivery model.DeliveryDB
-	err := d.db.Get(&delivery, "SELECT * FROM delivery WHERE id = $1", deliveryId)
+func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryWithItems, error) {
+	var deliveryWithItems model.DeliveryWithItems
+
+	err := tx.Get(&deliveryWithItems.DeliveryDB, `SELECT * FROM delivery WHERE id = $1`, deliveryId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, types.NewAppErr(fmt.Sprintf("delivery not found"),
-				types.ErrNotFound)
+			return nil, types.NewAppErr("delivery not found", types.ErrNotFound)
 		}
-		return nil, types.NewAppErr("inspected SQL error",
-			fmt.Errorf("%w: %w", types.ErrInspectedSQL, err))
+		return nil, types.NewAppErr(" inspected SQL error, failed to get delivery",
+			errors.Join(err, types.ErrInspectedSQL))
 	}
-	return &delivery, nil
+
+	err = tx.Select(
+		&deliveryWithItems.DeliveryItemsDB,
+		`SELECT * FROM delivery_items where delivery_id = $1`,
+		deliveryId)
+	if err != nil {
+		return nil, types.NewAppErr(" inspected SQL error, failed to get item",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	return &deliveryWithItems, nil
 }
 
-func (d *DeliveryRepository) GetAll(tx *sqlx.Tx) (*[]model.ProductDomain, error) {
+func (d *DeliveryRepository) GetAll(tx *sqlx.Tx) (*[]model.ProductDB, error) {
 	return nil, nil
 }
 
@@ -65,15 +87,3 @@ func (d *DeliveryRepository) UpdateById(tx *sqlx.Tx, deliveryId int64, status mo
 }
 
 func (d *DeliveryRepository) DeleteById(tx *sqlx.Tx, deliveryId int64) error { return nil }
-
-func (d *DeliveryRepository) SaveDeliveryProducts(tx *sqlx.Tx, deliveryProductsDB []model.DeliveryProductDB) error {
-	query := `INSERT INTO delivery_product(delivery_id, product_id, quantity, unit_price, total_amount)
-			   VALUES (:delivery_id, :product_id, :quantity, :unit_price, :total_amount)`
-
-	_, err := tx.NamedExec(query, deliveryProductsDB)
-	if err != nil {
-		return types.NewAppErr("inspected SQL error",
-			fmt.Errorf("failed to insert delivery %w: %w", err, types.ErrInspectedSQL))
-	}
-	return nil
-}

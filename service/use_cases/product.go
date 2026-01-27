@@ -46,7 +46,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 }
 
 func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) {
-	const op = "service.use_cases.product.GetById"
+	const op = "service.use_cases.product.GetWithItemsById"
 
 	product, err := p.store.ProductRepo.GetById(productId)
 	if err != nil {

@@ -40,16 +40,18 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 		response.ValidationError(err).SendResponse(w, r)
 		return
 	}
-	saved, err := d.services.DeliveryService.Save(requestBody)
+	DeliveryDomain := requestBody.MapToDomain()
+	saved, err := d.services.DeliveryService.Save(DeliveryDomain)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-	response.Created(saved)
+
+	response.Created(saved).SendResponse(w, r)
 
 }
 func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request) {
-	const op = "control.delivery.GetById"
+	const op = "control.delivery.GetWithItemsById"
 
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

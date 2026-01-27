@@ -25,7 +25,7 @@ type ProductService interface {
 }
 
 type DeliveryService interface {
-	Save(DeliveryToSave model.DeliveryToSave) (*model.DeliveryDomain, error)
+	Save(deliveryToSave model.DeliveryDomain) (*model.DeliveryDomain, error)
 	GetById(deliveryId int64) (*model.DeliveryDomain, error)
 	GetAll() ([]model.DeliveryDomain, error)
 	GetByStatus(status string) (*model.DeliveryDomain, error)
