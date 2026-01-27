@@ -15,24 +15,19 @@ CREATE TABLE USERS (
                        user_role  text not null
 );
 
-CREATE TABLE DELIVERY (
+CREATE TABLE "delivery" (
                         id bigserial primary key,
-                        recipient_goods text NOT NULL,
+                        recipient       text NOT NULL,
                         address         text not null,
-                        status_delivery text NOT NULL,
-                        created_At      timestamp NOT NULL,
-                        total_amount bigint not null
+                        status          text NOT NULL,
+                        created_At      timestamp NOT NULL
 );
 
-CREATE TABLE DELIVERY_PRODUCT (
-                        id           bigserial  primary key,
-                        delivery_id  bigint  not null ,
-                        product_id   bigint  not null ,
-                        quantity     bigint not null,
-                        unit_price   bigint not null,
-                        total_amount bigint not null,
-                        FOREIGN KEY (delivery_id) REFERENCES DELIVERY(id),
-                        FOREIGN KEY (product_id) REFERENCES PRODUCTS(id),
-                        UNIQUE (delivery_id, product_id)
+CREATE TABLE delivery_items (
+    id bigserial primary key,
+    Delivery_id bigint NOT NULL REFERENCES DELIVERY(id),
+    Product_id bigint NOT NULL REFERENCES products(id),
+    item_price bigint NOT NULL,
+    quantity bigint NOT NULL
 )
 
