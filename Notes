@@ -525,3 +525,19 @@ if err := tx.Commit(); err != nil {
     return err
 }
 committed = true
+
+
+_, err := tx.CopyFrom(
+	ctx,
+	pgx.Identifier{"delivery_items"},
+	[]string{"delivery_id", "product_id", "quantity", "item_price"},
+	pgx.CopyFromRows(
+		deliveryItemsToCopyRows(delivery.ID, delivery.DeliveryItemsDB),
+	),
+)
+if err != nil {
+	return nil, types.NewAppErr(
+		"failed to copy delivery items",
+		errors.Join(err, types.ErrInspectedSQL),
+	)
+}
