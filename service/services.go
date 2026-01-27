@@ -25,10 +25,10 @@ type ProductService interface {
 }
 
 type DeliveryService interface {
-	Save(deliveryToSave model.DeliveryDomain) (*model.DeliveryDomain, error)
-	GetById(deliveryId int64) (*model.DeliveryDomain, error)
-	GetAll() ([]model.DeliveryDomain, error)
-	GetByStatus(status string) (*model.DeliveryDomain, error)
+	Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error)
+	GetById(deliveryId int64) (*model.DeliveryItemsDomain, error)
+	GetAll() (*model.DeliveryItemListDomain, error)
+	GetByStatus(status string) (*model.DeliveryItemListDomain, error)
 	UpdateById(deliveryId int64, status model.UpdateStatus) error
 	DeleteById(deliveryId int64) error
 }

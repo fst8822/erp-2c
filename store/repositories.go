@@ -24,10 +24,10 @@ type UserRepository interface {
 }
 
 type DeliveryRepository interface {
-	SaveDeliveryWithProducts(tx *sqlx.Tx, deliveryWithItems model.DeliveryWithItems) (*model.DeliveryDB, error)
-	GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryWithItems, error)
-	GetAll(tx *sqlx.Tx) (*[]model.ProductDB, error)
-	GetByStatus(tx *sqlx.Tx, status string) (*model.DeliveryDB, error)
+	SaveWithItems(tx *sqlx.Tx, deliveryWithItems model.DeliveryWithItemsDB) (*model.DeliveryDB, error)
+	GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryWithItemsDB, error)
+	GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error)
+	GetWithItemsByStatus(tx *sqlx.Tx, status string) (*model.DeliverListDB, error)
 	UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error
 	DeleteById(tx *sqlx.Tx, deliveryId int64) error
 }
