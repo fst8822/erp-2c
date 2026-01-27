@@ -67,7 +67,7 @@ func (u *UserService) GetById(userId int64) (*model.UserDomain, error) {
 }
 
 func (u *UserService) GetByLogin(userLogin string) (*model.UserDomain, error) {
-	const op = "service.use_cases.user.GetById"
+	const op = "service.use_cases.user.GetWithItemsById"
 
 	found, err := u.store.UserRepo.GetByLogin(userLogin)
 	if err != nil {
