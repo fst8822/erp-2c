@@ -305,7 +305,7 @@ func DeliveryFromDTO(dto DeliveryToSave) (*Delivery, error) {
 	items := make([]DeliveryItem, 0, len(dto.Items))
 
 	for _, i := range dto.Items {
-		item, err := NewDeliveryItem(i.ProductId, i.ItemPrice, i.Quantity)
+		item, err := NewDeliveryItem(i.ProductID, i.ItemPrice, i.Quantity)
 		if err != nil {
 			return nil, err
 		}
@@ -442,7 +442,7 @@ func (i *DeliveryItem) TotalAmount() int64 {
 	return i.ItemPrice * i.Quantity
 }
 
-type DeliveryDomain struct {
+type DeliveryItemDomain struct {
 	Id             int64
 	DeliveryItems  []DeliveryItem
 	RecipientGoods string
@@ -457,13 +457,13 @@ type DeliveryDomain struct {
 // ====================
 
 // Добавление товара
-func (d *DeliveryDomain) AddItem(item DeliveryItem) {
+func (d *DeliveryItemDomain) AddItem(item DeliveryItem) {
 	d.DeliveryItems = append(d.DeliveryItems, item)
 	d.updateTotal() // автоматически синхронизируем TotalAmount
 }
 
 // Удаление товара по индексу
-func (d *DeliveryDomain) RemoveItem(index int) {
+func (d *DeliveryItemDomain) RemoveItem(index int) {
 	if index < 0 || index >= len(d.DeliveryItems) {
 		return
 	}
@@ -472,7 +472,7 @@ func (d *DeliveryDomain) RemoveItem(index int) {
 }
 
 // Обновление количества/цены товара по индексу
-func (d *DeliveryDomain) UpdateItem(index int, item DeliveryItem) {
+func (d *DeliveryItemDomain) UpdateItem(index int, item DeliveryItem) {
 	if index < 0 || index >= len(d.DeliveryItems) {
 		return
 	}
@@ -483,7 +483,7 @@ func (d *DeliveryDomain) UpdateItem(index int, item DeliveryItem) {
 // ====================
 // Внутренний метод для синхронизации суммы
 // ====================
-func (d *DeliveryDomain) updateTotal() {
+func (d *DeliveryItemDomain) updateTotal() {
 	var total int64
 	for _, item := range d.DeliveryItems {
 		total += item.TotalAmount()
