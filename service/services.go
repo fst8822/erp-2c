@@ -28,7 +28,7 @@ type DeliveryService interface {
 	Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error)
 	GetById(deliveryId int64) (*model.DeliveryItemsDomain, error)
 	GetAll() (*model.DeliveryItemListDomain, error)
-	GetByStatus(status string) (*model.DeliveryItemListDomain, error)
-	UpdateById(deliveryId int64, status model.UpdateStatus) error
+	GetByStatus(status model.DeliveryStatus) (*model.DeliveryItemListDomain, error)
+	UpdateById(deliveryId int64, update model.UpdateStatus) error
 	DeleteById(deliveryId int64) error
 }
