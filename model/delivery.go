@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-type deliveryStatus string
+type DeliveryStatus string
 
-func (s deliveryStatus) IsValid() error {
+func (s DeliveryStatus) IsValid() error {
 	switch s {
 	case CREATED, SHIPPED, DELIVERED, CANCELLED, ACCEPTED:
 		return nil
@@ -17,18 +17,18 @@ func (s deliveryStatus) IsValid() error {
 }
 
 const (
-	CREATED   deliveryStatus = "CREATED"
-	SHIPPED   deliveryStatus = "SHIPPED"
-	DELIVERED deliveryStatus = "DELIVERED"
-	CANCELLED deliveryStatus = "CANCELLED"
-	ACCEPTED  deliveryStatus = "ACCEPTED"
+	CREATED   DeliveryStatus = "CREATED"
+	SHIPPED   DeliveryStatus = "SHIPPED"
+	DELIVERED DeliveryStatus = "DELIVERED"
+	CANCELLED DeliveryStatus = "CANCELLED"
+	ACCEPTED  DeliveryStatus = "ACCEPTED"
 )
 
 type DeliveryDB struct {
 	ID        int64          `db:"id"`
 	Recipient string         `db:"recipient"`
 	Address   string         `db:"address"`
-	Status    deliveryStatus `db:"status"`
+	Status    DeliveryStatus `db:"status"`
 	CreatedAt time.Time      `db:"created_at"`
 }
 
@@ -54,7 +54,7 @@ type DeliverDomain struct {
 	ID            int64          `json:"id"`
 	Recipient     string         `json:"recipient"`
 	Address       string         `json:"address"`
-	Status        deliveryStatus `json:"status"`
+	Status        DeliveryStatus `json:"status"`
 	CreatedAt     time.Time      `json:"created_at"`
 	DeliverAmount int64          `json:"deliver_amount"`
 }
@@ -104,7 +104,7 @@ type DeliveryItemToSave struct {
 
 type UpdateStatus struct {
 	DeliveryId int64          `json:"id" validate:"gt=0"`
-	Status     deliveryStatus `json:"status" validate:"required,min=1"`
+	Status     DeliveryStatus `json:"status" validate:"required,min=1"`
 }
 
 func (d *DeliveryToSave) MapToDomain() DeliveryItemsDomain {

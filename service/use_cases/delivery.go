@@ -165,9 +165,9 @@ func (d *DeliveryService) GetAll() (*model.DeliveryItemListDomain, error) {
 	return &deliveryItemList, nil
 }
 
-func (d *DeliveryService) GetByStatus(status string) (*model.DeliveryItemListDomain, error) {
+func (d *DeliveryService) GetByStatus(status model.DeliveryStatus) (*model.DeliveryItemListDomain, error) {
 
-	const op = "service.use_cases.delivery.GetByStatus"
+	const op = "service.use_cases.delivery.GetAllByStatus"
 	sLogger := slog.With("op", op, "status", status)
 
 	tx, err := d.repo.BeginTx(context.Background())
@@ -188,7 +188,7 @@ func (d *DeliveryService) GetByStatus(status string) (*model.DeliveryItemListDom
 		}
 	}()
 
-	deliveryListDB, err := d.repo.Delivery.GetWithItemsByStatus(tx, status)
+	deliveryListDB, err := d.repo.Delivery.GetAllWithItemsByStatus(tx, status)
 	if err != nil {
 		sLogger.Error("failed to find delivery", sl.Err(err))
 		return nil, err

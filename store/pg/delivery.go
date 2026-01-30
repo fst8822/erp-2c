@@ -50,22 +50,68 @@ func (d *DeliveryRepository) SaveWithItems(
 	return &deliveryWithItems.DeliveryDB, nil
 }
 
+func (d *DeliveryRepository) Save(tx *sqlx.Tx, deliveryDB model.DeliveryDB) (*model.DeliveryDB, error) {
+	queryOne := `INSERT INTO delivery(recipient, address, status, created_at)  
+			  		VALUES ($1, $2, $3, $4) RETURNING id`
+
+	var err error
+	if tx == nil {
+		err = d.db.QueryRowx(
+			queryOne,
+			deliveryDB.Recipient,
+			deliveryDB.Address,
+			deliveryDB.Status,
+			deliveryDB.CreatedAt,
+		).Scan(&deliveryDB.ID)
+	} else {
+		err = tx.QueryRowx(
+			queryOne,
+			deliveryDB.Recipient,
+			deliveryDB.Address,
+			deliveryDB.Status,
+			deliveryDB.CreatedAt,
+		).Scan(&deliveryDB.ID)
+	}
+
+	if err != nil {
+		return nil, types.NewAppErr("inspected SQL error, failed to insert delivery",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	return &deliveryDB, err
+}
+
 func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryWithItemsDB, error) {
 	var deliveryWithItems model.DeliveryWithItemsDB
+	queryGet := `SELECT * FROM delivery WHERE id = $1`
+	querySelect := `SELECT * FROM delivery_items where delivery_id = $1`
 
-	err := tx.Get(&deliveryWithItems.DeliveryDB, `SELECT * FROM delivery WHERE id = $1`, deliveryId)
+	var err error
+	if tx == nil {
+		err = d.db.Get(&deliveryWithItems.DeliveryDB, queryGet, deliveryId)
+
+	} else {
+		err = tx.Get(&deliveryWithItems.DeliveryDB, queryGet, deliveryId)
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, types.NewAppErr("delivery not found", types.ErrNotFound)
 		}
-		return nil, types.NewAppErr(" inspected SQL error, failed to get delivery",
+		return nil, types.NewAppErr(" inspected SQL error, failed to get delivery by id",
 			errors.Join(err, types.ErrInspectedSQL))
 	}
 
-	err = tx.Select(
-		&deliveryWithItems.DeliveryItemsDB,
-		`SELECT * FROM delivery_items where delivery_id = $1`,
-		deliveryId)
+	if tx == nil {
+		err = d.db.Select(
+			&deliveryWithItems.DeliveryItemsDB,
+			querySelect,
+			deliveryId)
+	} else {
+		err = tx.Select(
+			&deliveryWithItems.DeliveryItemsDB,
+			querySelect,
+			deliveryId)
+	}
+
 	if err != nil {
 		return nil, types.NewAppErr(" inspected SQL error, failed to get item",
 			errors.Join(err, types.ErrInspectedSQL))
@@ -73,16 +119,42 @@ func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*m
 	return &deliveryWithItems, nil
 }
 
+func (d *DeliveryRepository) GetAllByStatus(tx *sqlx.Tx, status model.DeliveryStatus) ([]model.DeliveryDB, error) {
+	var delivers []model.DeliveryDB
+	query := `SELECT * FROM delivery WHERE status = $1`
+
+	var err error
+	if tx == nil {
+		err = d.db.Select(&delivers, query, status)
+	} else {
+		err = tx.Select(&delivers, query, status)
+	}
+	if err != nil {
+		return nil, types.NewAppErr(" inspected SQL error, failed to get deliveries by status",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	return delivers, nil
+}
+
 func (d *DeliveryRepository) GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error) {
 	var deliverListDB model.DeliverListDB
 
-	err := tx.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery")
+	var err error
+	if tx == nil {
+		err = d.db.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery")
+	} else {
+		err = tx.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery")
+	}
 	if err != nil {
-		return nil, types.NewAppErr("inspected SQL error, failed to get delivery",
+		return nil, types.NewAppErr("inspected SQL error, failed to get deliveries",
 			errors.Join(err, types.ErrNotFound))
 	}
 
-	err = tx.Select(&deliverListDB.ItemsDB, "SELECT * FROM delivery_items")
+	if tx == nil {
+		err = d.db.Select(&deliverListDB.ItemsDB, "SELECT * FROM delivery_items")
+	} else {
+		err = tx.Select(&deliverListDB.ItemsDB, "SELECT * FROM delivery_items")
+	}
 	if err != nil {
 		return nil, types.NewAppErr("inspected SQL error, failed to get delivery",
 			errors.Join(err, types.ErrNotFound))
@@ -90,18 +162,29 @@ func (d *DeliveryRepository) GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error) {
 	return &deliverListDB, nil
 }
 
-func (d *DeliveryRepository) GetWithItemsByStatus(tx *sqlx.Tx, status string) (*model.DeliverListDB, error) {
+func (d *DeliveryRepository) GetAllWithItemsByStatus(tx *sqlx.Tx, status model.DeliveryStatus) (*model.DeliverListDB, error) {
 	var deliverListDB model.DeliverListDB
 
-	err := tx.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery d where d.status = $1", status)
+	var err error
+	if tx == nil {
+		err = d.db.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery d where d.status = $1", status)
+	} else {
+		err = tx.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery d where d.status = $1", status)
+	}
 	if err != nil {
-		return nil, types.NewAppErr("inspected SQL error, failed to get delivery",
+		return nil, types.NewAppErr("inspected SQL error, failed to get deliveries by status",
 			errors.Join(err, types.ErrNotFound))
 	}
 
-	err = tx.Select(&deliverListDB.ItemsDB, `SELECT di.id, di.delivery_id, di.product_id, di.item_price, di.quantity 
+	if tx == nil {
+		err = d.db.Select(&deliverListDB.ItemsDB, `SELECT di.id, di.delivery_id, di.product_id, di.item_price, di.quantity 
 												   FROM delivery_items di join delivery d on di.delivery_id = d.id
 												   WHERE d.status = $1`, status)
+	} else {
+		err = tx.Select(&deliverListDB.ItemsDB, `SELECT di.id, di.delivery_id, di.product_id, di.item_price, di.quantity 
+												   FROM delivery_items di join delivery d on di.delivery_id = d.id
+												   WHERE d.status = $1`, status)
+	}
 	if err != nil {
 		return nil, types.NewAppErr("inspected SQL error, failed to get delivery",
 			errors.Join(err, types.ErrNotFound))
@@ -114,3 +197,30 @@ func (d *DeliveryRepository) UpdateById(tx *sqlx.Tx, deliveryId int64, status mo
 }
 
 func (d *DeliveryRepository) DeleteById(tx *sqlx.Tx, deliveryId int64) error { return nil }
+
+func (d *DeliveryRepository) ChangeStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error {
+
+	query := `UPDATE delivery SET status = $1 WHERE id = any ($2)`
+	var result sql.Result
+	var err error
+	if tx == nil {
+		result, err = d.db.Exec(query, status, id)
+	} else {
+		result, err = tx.Exec(query, status, id)
+	}
+
+	if err != nil {
+		return types.NewAppErr(" inspected SQL error, failed to change deliveries status",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return types.NewAppErr(" inspected SQL error, failed to get RowsAffected",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	if rows == 0 {
+		return types.NewAppErr(" inspected SQL error, no change statuses deliveries",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	return nil
+}
