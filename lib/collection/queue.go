@@ -3,25 +3,26 @@ package collection
 import "erp-2c/model"
 
 type Queue struct {
-	data chan model.DeliverDomain
+	in  chan model.DeliveryDB
+	out chan model.DeliveryDB
 }
 
-func NewQueue(size int64) *Queue {
-	return &Queue{data: make(chan model.DeliverDomain, size)}
+func NewQueue(capacity int) *Queue {
+	return &Queue{
+		in:  make(chan model.DeliveryDB, capacity),
+		out: make(chan model.DeliveryDB, capacity),
+	}
 }
 
-func (q *Queue) Enqueue(delivery model.DeliverDomain) {
-	q.data <- delivery
+func (q *Queue) In() chan model.DeliveryDB {
+	return q.in
 }
-func (q *Queue) Dequeue() model.DeliverDomain {
-	return <-q.data
+func (q *Queue) Out() chan model.DeliveryDB {
+	return q.out
 }
-func (q *Queue) Peek() model.DeliverDomain {
-	return <-q.data
+func (q *Queue) CloseIn() {
+	close(q.in)
 }
-func (q *Queue) IsEmpty() bool {
-	return len(q.data) == 0
-}
-func (q *Queue) Size() int {
-	return len(q.data)
+func (q *Queue) CloseOut() {
+	close(q.out)
 }

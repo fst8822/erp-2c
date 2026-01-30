@@ -4,7 +4,9 @@ import (
 	"context"
 	"erp-2c/config"
 	"erp-2c/controller/routers"
+	"erp-2c/lib/collection"
 	"erp-2c/lib/sl"
+	workers "erp-2c/lib/workers"
 	"erp-2c/service/use_cases"
 	"erp-2c/store"
 	"erp-2c/store/pg"
@@ -60,7 +62,9 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
+	queue := collection.NewQueue(10)
+	workPoll := workers.NewWorkerPoolQueue(storeRepo, queue, 5, 1)
+	workPoll.Run(ctx)
 	r := routers.New(serviceManager)
 
 	srv := &http.Server{
