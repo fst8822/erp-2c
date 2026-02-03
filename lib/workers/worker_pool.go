@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const bachSize = 4
+
 type Worker interface {
 	Run(ctx context.Context)
 }
@@ -48,16 +50,7 @@ func (w *WorkerPoolQueue) Run(ctx context.Context) {
 	}
 
 	w.wg.Add(1)
-	go func() {
-		defer w.wg.Done()
-		for deliveryDB := range w.queue.Out() {
-			logger.Info("Start processing out channel", slog.Int64("DeliveryID", deliveryDB.ID))
-			err := w.store.Delivery.ChangeStatusById(nil, deliveryDB.ID, deliveryDB.Status)
-			if err != nil {
-				logger.Error("Failed send update deliveries", sl.Err(err))
-			}
-		}
-	}()
+	go w.updateDBItem()
 
 	ticker := time.NewTicker(w.cron * time.Second)
 	defer ticker.Stop()
@@ -75,6 +68,43 @@ func (w *WorkerPoolQueue) Run(ctx context.Context) {
 			err := w.loadDeliveries(workerCtx)
 			if err != nil {
 				logger.Error("Failed to load deliveries", sl.Err(err))
+			}
+		}
+	}
+}
+
+func (w *WorkerPoolQueue) updateDBItem() {
+	const op = "lib.workers.worker_pool.loadDeliveries"
+	logger := slog.With("op", op)
+
+	groups := make(map[model.DeliveryStatus][]int64, 100)
+	ticket := time.NewTicker(3 * time.Second)
+	defer w.wg.Done()
+	defer ticket.Stop()
+
+	for deliveryDB := range w.queue.Out() {
+		groups[deliveryDB.Status] = append(groups[deliveryDB.Status], deliveryDB.ID)
+		logger.Info("Start processing out channel", slog.Int64("DeliveryID", deliveryDB.ID))
+		select {
+		case <-ticket.C:
+			countRows := w.GetTotalCount(groups)
+			logger.Info("Start update to db", slog.Int("bachSize", countRows))
+			err := w.store.Delivery.UpdateStatusByIds(nil, groups)
+			if err != nil {
+				logger.Error("Failed send update deliveries", sl.Err(err))
+				return
+			}
+			groups = make(map[model.DeliveryStatus][]int64)
+		default:
+			countRows := w.GetTotalCount(groups)
+			if countRows > bachSize {
+				logger.Info("Start update to db", slog.Int("bachSize", len(groups)))
+				err := w.store.Delivery.UpdateStatusByIds(nil, groups)
+				if err != nil {
+					logger.Error("Failed send update deliveries", sl.Err(err))
+					return
+				}
+				groups = make(map[model.DeliveryStatus][]int64)
 			}
 		}
 	}
@@ -124,4 +154,12 @@ func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (w *WorkerPoolQueue) GetTotalCount(groups map[model.DeliveryStatus][]int64) int {
+	var totalCount int
+	for _, ids := range groups {
+		totalCount += len(ids)
+	}
+	return totalCount
 }

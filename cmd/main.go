@@ -120,6 +120,7 @@ func run() error {
 		return err
 	}
 	wg.Wait()
+
 	slog.Info("Server shutdown gracefully")
 	return nil
 }

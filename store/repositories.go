@@ -32,5 +32,6 @@ type DeliveryRepository interface {
 	GetAllByStatus(tx *sqlx.Tx, status model.DeliveryStatus) ([]model.DeliveryDB, error)
 	UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error
 	DeleteById(tx *sqlx.Tx, deliveryId int64) error
-	ChangeStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error
+	UpdateStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error
+	UpdateStatusByIds(tx *sqlx.Tx, groups map[model.DeliveryStatus][]int64) error
 }

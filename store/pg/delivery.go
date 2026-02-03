@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type DeliveryRepository struct {
@@ -198,15 +199,48 @@ func (d *DeliveryRepository) UpdateById(tx *sqlx.Tx, deliveryId int64, status mo
 
 func (d *DeliveryRepository) DeleteById(tx *sqlx.Tx, deliveryId int64) error { return nil }
 
-func (d *DeliveryRepository) ChangeStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error {
+func (d *DeliveryRepository) UpdateStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error {
 
 	query := `UPDATE delivery SET status = $1 WHERE id = $2`
 	var result sql.Result
 	var err error
+
 	if tx == nil {
 		result, err = d.db.Exec(query, status, id)
 	} else {
 		result, err = tx.Exec(query, status, id)
+	}
+
+	if err != nil {
+		return types.NewAppErr(" inspected SQL error, failed to change deliveries status",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return types.NewAppErr(" inspected SQL error, failed to get RowsAffected",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	if rows == 0 {
+		return types.NewAppErr(" inspected SQL error, no change statuses deliveries",
+			errors.Join(err, types.ErrInspectedSQL))
+	}
+	return nil
+}
+
+func (d *DeliveryRepository) UpdateStatusByIds(tx *sqlx.Tx, groups map[model.DeliveryStatus][]int64) error {
+	query := `UPDATE delivery SET status = $1 WHERE id = any ($2)`
+	var result sql.Result
+	var err error
+
+	if tx == nil {
+		for status, ids := range groups {
+			result, err = d.db.Exec(query, status, pq.Array(ids))
+		}
+
+	} else {
+		for status, ids := range groups {
+			result, err = tx.Exec(query, status, pq.Array(ids))
+		}
 	}
 
 	if err != nil {
