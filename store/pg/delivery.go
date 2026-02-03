@@ -200,7 +200,7 @@ func (d *DeliveryRepository) DeleteById(tx *sqlx.Tx, deliveryId int64) error { r
 
 func (d *DeliveryRepository) ChangeStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error {
 
-	query := `UPDATE delivery SET status = $1 WHERE id = any ($2)`
+	query := `UPDATE delivery SET status = $1 WHERE id = $2`
 	var result sql.Result
 	var err error
 	if tx == nil {

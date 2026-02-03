@@ -6,7 +6,7 @@ import (
 	"erp-2c/controller/routers"
 	"erp-2c/lib/collection"
 	"erp-2c/lib/sl"
-	workers "erp-2c/lib/workers"
+	"erp-2c/lib/workers"
 	"erp-2c/service/use_cases"
 	"erp-2c/store"
 	"erp-2c/store/pg"
@@ -17,14 +17,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	ctx := context.Background()
-	if err := run(ctx); err != nil {
+	if err := run(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -40,8 +40,9 @@ func loadENV() {
 	fmt.Printf("RUN APP: env=%s\n", env)
 }
 
-func run(ctx context.Context) error {
-
+func run() error {
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
 	loadENV()
 
 	cfg := config.Get()
@@ -57,14 +58,21 @@ func run(ctx context.Context) error {
 	}
 
 	storeRepo := store.NewStore(db.Pg)
-
 	serviceManager, err := use_cases.NewManager(storeRepo)
 	if err != nil {
 		return err
 	}
+
 	queue := collection.NewQueue(10)
-	workPoll := workers.NewWorkerPoolQueue(storeRepo, queue, 5, 1)
-	workPoll.Run(ctx)
+	workPoll := workers.NewWorkerPool(storeRepo, queue, 5, 5)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		go workPoll.Run(ctx)
+	}()
+
 	r := routers.New(serviceManager)
 
 	srv := &http.Server{
@@ -90,12 +98,16 @@ func run(ctx context.Context) error {
 
 	select {
 	case err = <-serverErrCh:
-		return err
+		slog.Info("Server error, initiating shutdown", sl.Err(err))
 	case <-stop:
 		slog.Info("Shutdown signal is received")
 	case <-ctx.Done():
 		slog.Info("Context cancelled")
 	}
+
+	slog.Info("Starting graceful shutdown")
+	ctxCancel()
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
@@ -107,6 +119,7 @@ func run(ctx context.Context) error {
 		}
 		return err
 	}
+	wg.Wait()
 	slog.Info("Server shutdown gracefully")
 	return nil
 }
