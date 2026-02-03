@@ -541,3 +541,93 @@ if err != nil {
 		errors.Join(err, types.ErrInspectedSQL),
 	)
 }
+
+
+**********
+BatchSize
+UPDATE delivery d
+SET status = u.status
+FROM unnest($1::int[], $2::text[]) AS u(id, status)
+WHERE d.id = u.id;
+
+ids := make([]int, 0, len(deliveries))
+statuses := make([]string, 0, len(deliveries))
+
+for _, d := range deliveries {
+	ids = append(ids, d.ID)
+	statuses = append(statuses, d.Status)
+}
+
+_, err := d.db.Exec(query, pq.Array(ids), pq.Array(statuses))
+return err
+
+**
+UPDATE delivery
+SET status = $1
+WHERE id = ANY($2::bigint[]);
+
+ids := make([]int64, 0, len(deliveries))
+for _, d := range deliveries {
+	ids = append(ids, d.ID)
+}
+
+_, err := d.db.Exec(query, status, pq.Array(ids))
+
+
+***
+const batchSize = 500 // или 1000–5000, зависит от БД и объёма данных
+
+var valueStrings []string
+var valueArgs []interface{}
+
+for i, item := range items {
+    valueStrings = append(valueStrings, "(?, ?, ?, ?)")
+    valueArgs = append(valueArgs, item.ID, item.Status, item.CreatedAt, item.Payload)
+
+    if len(valueStrings) == batchSize || i == len(items)-1 {
+        // Формируем запрос
+        stmt := fmt.Sprintf(
+            "INSERT INTO deliveries (id, status, created_at, payload) VALUES %s",
+            strings.Join(valueStrings, ","),
+        )
+
+        _, err := db.Exec(stmt, valueArgs...)
+        if err != nil {
+            // обработка ошибки
+        }
+
+        // Сбрасываем для следующего батча
+        valueStrings = valueStrings[:0]
+        valueArgs = valueArgs[:0]
+    }
+}
+
+const batchSize = 500 // 100–1000, зависит от БД и количества полей
+
+for i := 0; i < len(deliveries); i += batchSize {
+    end := i + batchSize
+    if end > len(deliveries) {
+        end = len(deliveries)
+    }
+
+    batch := deliveries[i:end]
+
+    // Собираем placeholders и значения
+    var valueStrings []string
+    var valueArgs []interface{}
+
+    for _, d := range batch {
+        valueStrings = append(valueStrings, "(?, ?, ?)")
+        valueArgs = append(valueArgs, d.ID, d.Status, d.CreatedAt)
+    }
+
+    stmt := fmt.Sprintf(
+        "INSERT INTO deliveries (id, status, created_at) VALUES %s",
+        strings.Join(valueStrings, ","),
+    )
+
+    _, err := db.Exec(stmt, valueArgs...)
+    if err != nil {
+        // обработка ошибки
+    }
+}
