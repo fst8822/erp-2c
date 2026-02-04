@@ -122,7 +122,7 @@ func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*m
 
 func (d *DeliveryRepository) GetAllByStatus(tx *sqlx.Tx, status model.DeliveryStatus) ([]model.DeliveryDB, error) {
 	var delivers []model.DeliveryDB
-	query := `SELECT * FROM delivery WHERE status = $1`
+	query := `SELECT * FROM delivery WHERE status = $1 FOR UPDATE SKIP LOCKED LIMIT 5`
 
 	var err error
 	if tx == nil {

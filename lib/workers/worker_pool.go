@@ -2,10 +2,12 @@ package workers
 
 import (
 	"context"
+	"database/sql"
 	"erp-2c/lib/collection"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"erp-2c/store"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -73,43 +75,6 @@ func (w *WorkerPoolQueue) Run(ctx context.Context) {
 	}
 }
 
-func (w *WorkerPoolQueue) updateDBItem() {
-	const op = "lib.workers.worker_pool.loadDeliveries"
-	logger := slog.With("op", op)
-
-	groups := make(map[model.DeliveryStatus][]int64, 100)
-	ticket := time.NewTicker(3 * time.Second)
-	defer w.wg.Done()
-	defer ticket.Stop()
-
-	for deliveryDB := range w.queue.Out() {
-		groups[deliveryDB.Status] = append(groups[deliveryDB.Status], deliveryDB.ID)
-		logger.Info("Start processing out channel", slog.Int64("DeliveryID", deliveryDB.ID))
-		select {
-		case <-ticket.C:
-			countRows := w.GetTotalCount(groups)
-			logger.Info("Start update to db", slog.Int("bachSize", countRows))
-			err := w.store.Delivery.UpdateStatusByIds(nil, groups)
-			if err != nil {
-				logger.Error("Failed send update deliveries", sl.Err(err))
-				return
-			}
-			groups = make(map[model.DeliveryStatus][]int64)
-		default:
-			countRows := w.GetTotalCount(groups)
-			if countRows > bachSize {
-				logger.Info("Start update to db", slog.Int("bachSize", len(groups)))
-				err := w.store.Delivery.UpdateStatusByIds(nil, groups)
-				if err != nil {
-					logger.Error("Failed send update deliveries", sl.Err(err))
-					return
-				}
-				groups = make(map[model.DeliveryStatus][]int64)
-			}
-		}
-	}
-}
-
 func (w *WorkerPoolQueue) worker(ctx context.Context, workerId int) {
 	defer w.wg.Done()
 
@@ -135,11 +100,29 @@ func (w *WorkerPoolQueue) worker(ctx context.Context, workerId int) {
 		}
 	}
 }
+
 func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context) error {
 	const op = "lib.workers.worker_pool.loadDeliveries"
 	logger := slog.With("op", op)
 
-	deliveriesDB, err := w.store.Delivery.GetAllByStatus(nil, model.CREATED)
+	tx, err := w.store.BeginTxx(ctx)
+	if err != nil {
+		logger.Error("Failed to open transaction", sl.Err(err))
+		return err
+	}
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			logger.Error("Failed to Rollback transaction", sl.Err(err))
+		} else {
+			logger.Info("Transaction Rollback is successful")
+		}
+	}()
+
+	deliveriesDB, err := w.store.Delivery.GetAllByStatus(tx, model.CREATED)
 	if err != nil {
 		return err
 	}
@@ -153,7 +136,50 @@ func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context) error {
 		case w.queue.In() <- deliveriesDB[i]:
 		}
 	}
+	err = tx.Commit()
+	if err != nil {
+		logger.Error("Failed to commit transaction", sl.Err(err))
+		return err
+	}
+	committed = true
 	return nil
+}
+
+func (w *WorkerPoolQueue) updateDBItem() {
+	const op = "lib.workers.worker_pool.updateDBItem"
+	logger := slog.With("op", op)
+
+	groups := make(map[model.DeliveryStatus][]int64, 100)
+	ticket := time.NewTicker(3 * time.Second)
+	defer w.wg.Done()
+	defer ticket.Stop()
+
+	for deliveryDB := range w.queue.Out() {
+		groups[deliveryDB.Status] = append(groups[deliveryDB.Status], deliveryDB.ID)
+		logger.Info("Start processing out channel", slog.Int64("DeliveryID", deliveryDB.ID))
+		select {
+		case <-ticket.C:
+			countRows := w.GetTotalCount(groups)
+			logger.Info("Start update to db", slog.Int("bachSize", countRows))
+			err := w.store.Delivery.UpdateStatusByIds(nil, groups)
+			if err != nil {
+				logger.Error("Failed send update deliveries", sl.Err(err))
+				return
+			}
+			groups = make(map[model.DeliveryStatus][]int64, 100)
+		default:
+			countRows := w.GetTotalCount(groups)
+			if countRows > bachSize {
+				logger.Info("Start update to db", slog.Int("bachSize", len(groups)))
+				err := w.store.Delivery.UpdateStatusByIds(nil, groups)
+				if err != nil {
+					logger.Error("Failed send update deliveries", sl.Err(err))
+					return
+				}
+				groups = make(map[model.DeliveryStatus][]int64, 100)
+			}
+		}
+	}
 }
 
 func (w *WorkerPoolQueue) GetTotalCount(groups map[model.DeliveryStatus][]int64) int {

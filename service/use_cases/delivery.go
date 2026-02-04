@@ -26,7 +26,7 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 	sLogger := slog.With("op", op)
 	sLogger.Info("Begin save delivery.", slog.Any("delivery", delivery))
 
-	tx, err := d.repo.BeginTx(context.Background())
+	tx, err := d.repo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
@@ -87,7 +87,7 @@ func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryItemsDomain,
 	const op = "service.use_cases.delivery.GetWithItemsById"
 	sLogger := slog.With("op", op, "deliveryId", deliveryId)
 
-	tx, err := d.repo.BeginTx(context.Background())
+	tx, err := d.repo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
@@ -126,7 +126,7 @@ func (d *DeliveryService) GetAll() (*model.DeliveryItemListDomain, error) {
 	const op = "control.delivery.GetAll"
 	sLogger := slog.With("op", op)
 
-	tx, err := d.repo.BeginTx(context.Background())
+	tx, err := d.repo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
@@ -170,7 +170,7 @@ func (d *DeliveryService) GetByStatus(status model.DeliveryStatus) (*model.Deliv
 	const op = "service.use_cases.delivery.GetAllByStatus"
 	sLogger := slog.With("op", op, "status", status)
 
-	tx, err := d.repo.BeginTx(context.Background())
+	tx, err := d.repo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
