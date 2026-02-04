@@ -120,15 +120,21 @@ func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*m
 	return &deliveryWithItems, nil
 }
 
-func (d *DeliveryRepository) GetAllByStatus(tx *sqlx.Tx, status model.DeliveryStatus) ([]model.DeliveryDB, error) {
+func (d *DeliveryRepository) LockAndGetDeliveries(
+	tx *sqlx.Tx, status model.DeliveryStatus, instanceID string) ([]model.DeliveryDB, error) {
 	var delivers []model.DeliveryDB
-	query := `SELECT * FROM delivery WHERE status = $1 FOR UPDATE SKIP LOCKED LIMIT 5`
+	query := `UPDATE delivery SET locked_until = now() + interval '5 minutes', instance_id = $1
+	WHERE id IN (
+	    SELECT id FROM delivery WHERE status = $2 AND (locked_until is null OR locked_until < now())
+	    LIMIT 1
+	    FOR UPDATE SKIP LOCKED
+	) RETURNING id, recipient, address, status, created_at`
 
 	var err error
 	if tx == nil {
-		err = d.db.Select(&delivers, query, status)
+		err = d.db.Select(&delivers, query, instanceID, status)
 	} else {
-		err = tx.Select(&delivers, query, status)
+		err = tx.Select(&delivers, query, instanceID, status)
 	}
 	if err != nil {
 		return nil, types.NewAppErr(" inspected SQL error, failed to get deliveries by status",

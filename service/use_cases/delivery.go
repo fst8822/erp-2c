@@ -167,7 +167,7 @@ func (d *DeliveryService) GetAll() (*model.DeliveryItemListDomain, error) {
 
 func (d *DeliveryService) GetByStatus(status model.DeliveryStatus) (*model.DeliveryItemListDomain, error) {
 
-	const op = "service.use_cases.delivery.GetAllByStatus"
+	const op = "service.use_cases.delivery.LockAndGetDeliveries"
 	sLogger := slog.With("op", op, "status", status)
 
 	tx, err := d.repo.BeginTxx(context.Background())

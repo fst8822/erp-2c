@@ -11,6 +11,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const bachSize = 4
@@ -41,18 +43,19 @@ func NewWorkerPool(
 
 func (w *WorkerPoolQueue) Run(ctx context.Context) {
 	const op = "lib.workers.worker_pool.Run"
-	logger := slog.With("op", op)
+	instanceID := uuid.New().String()
+	logger := slog.With("op", op, "instanceID", instanceID)
 
 	workerCtx, cancelWorker := context.WithCancel(ctx)
 	defer cancelWorker()
 
 	for i := 0; i < w.countWorkers; i++ {
 		w.wg.Add(1)
-		go w.worker(workerCtx, i)
+		go w.worker(workerCtx, i, instanceID)
 	}
 
 	w.wg.Add(1)
-	go w.updateDBItem()
+	go w.updateDBItem(instanceID)
 
 	ticker := time.NewTicker(w.cron * time.Second)
 	defer ticker.Stop()
@@ -67,7 +70,7 @@ func (w *WorkerPoolQueue) Run(ctx context.Context) {
 			logger.Info("Worker pool stopped")
 			return
 		case <-ticker.C:
-			err := w.loadDeliveries(workerCtx)
+			err := w.loadDeliveries(workerCtx, instanceID)
 			if err != nil {
 				logger.Error("Failed to load deliveries", sl.Err(err))
 			}
@@ -75,35 +78,39 @@ func (w *WorkerPoolQueue) Run(ctx context.Context) {
 	}
 }
 
-func (w *WorkerPoolQueue) worker(ctx context.Context, workerId int) {
+func (w *WorkerPoolQueue) worker(ctx context.Context, workerId int, instanceID string) {
+	const op = "lib.workers.worker_pool.worker"
+	logger := slog.With(
+		"op", op,
+		"instanceID", instanceID,
+		"workerId", workerId)
+
 	defer w.wg.Done()
 
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("Worker stopped by context", slog.Int("id", workerId))
+			logger.Info("Worker stopped by context")
 			return
 		case delivery, ok := <-w.queue.In():
 			if !ok {
-				slog.Info("Worker stopped, IN channel is close", slog.Int("id", workerId))
+				logger.Info("Worker stopped, IN channel is close")
 				return
 			}
-			slog.Info("Start processing IN channel",
-				slog.Int("id", workerId),
+			logger.Info("Start processing IN channel",
 				slog.Int64("DeliveryID", delivery.ID))
 
 			delivery.Status = model.SHIPPED
 			w.queue.Out() <- delivery
-			slog.Info("Worker completed",
-				slog.Int("id", workerId),
+			logger.Info("Worker completed",
 				slog.Int64("DeliveryID", delivery.ID))
 		}
 	}
 }
 
-func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context) error {
+func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context, instanceID string) error {
 	const op = "lib.workers.worker_pool.loadDeliveries"
-	logger := slog.With("op", op)
+	logger := slog.With("op", op, "instanceID", instanceID)
 
 	tx, err := w.store.BeginTxx(ctx)
 	if err != nil {
@@ -122,7 +129,7 @@ func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context) error {
 		}
 	}()
 
-	deliveriesDB, err := w.store.Delivery.GetAllByStatus(tx, model.CREATED)
+	deliveriesDB, err := w.store.Delivery.LockAndGetDeliveries(tx, model.CREATED, instanceID)
 	if err != nil {
 		return err
 	}
@@ -145,9 +152,9 @@ func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context) error {
 	return nil
 }
 
-func (w *WorkerPoolQueue) updateDBItem() {
+func (w *WorkerPoolQueue) updateDBItem(instanceID string) {
 	const op = "lib.workers.worker_pool.updateDBItem"
-	logger := slog.With("op", op)
+	logger := slog.With("op", op, "instanceID", instanceID)
 
 	groups := make(map[model.DeliveryStatus][]int64, 100)
 	ticket := time.NewTicker(3 * time.Second)

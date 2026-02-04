@@ -29,7 +29,7 @@ type DeliveryRepository interface {
 	GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryWithItemsDB, error)
 	GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error)
 	GetAllWithItemsByStatus(tx *sqlx.Tx, status model.DeliveryStatus) (*model.DeliverListDB, error)
-	GetAllByStatus(tx *sqlx.Tx, status model.DeliveryStatus) ([]model.DeliveryDB, error)
+	LockAndGetDeliveries(tx *sqlx.Tx, status model.DeliveryStatus, instanceID string) ([]model.DeliveryDB, error)
 	UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error
 	DeleteById(tx *sqlx.Tx, deliveryId int64) error
 	UpdateStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error
