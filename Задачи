@@ -1,0 +1,62 @@
+Спроектировать структуру, позволяющую за амортизированную O(1) выполнять операции:
+a) равновероятное получение случайного элемента среди содержимого
+б) добавление/удаление элемента по значению (как HashSet)
+
+Описание интерфейса для удобства:
+// RandSet collection with complexity O(1) for all operations
+
+import "math"
+
+type RandSet interface {
+    Add(v int)
+    Remove(v int)
+    Rand() int
+}
+
+
+type Set struct {
+    data Map[int]struct{}
+    keys []int
+}
+
+NewSet Map[int]struct{}{
+    data := make(map[int]struct{})
+    return data
+}
+
+
+func(s *Set)  Add(v int) {
+    s.keys = append(s.keys, v)
+    s.data[v] = len(s.keys) - 1
+}
+
+func(s *Set)  Remove(v int) {
+    delete(s.data, v)
+}
+
+// rand.Intn(n)
+
+func(s *Set) Rand() int {
+    res := make([]int64)
+   for k := range s.data {
+       res = append(res, k)
+   }
+  index := rand.Intn(len(res))
+  return s.data[index]
+}
+
+
+           k       v
+myMap := {"a": "sasdasd", "e": "asdefa", "z": "asrarg", "b": "233e1e"}
+len(res) -> 10 000 000
+sortedKeys["a", b, e, z]
+
+for _, v := range sortedKeys {
+    print(myMap[v])
+}
+
+
+
+myset := {"a", "b", "asdasd", "d"}
+
+randVal := myset.Rand()
