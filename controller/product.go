@@ -64,7 +64,7 @@ func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
-	const op = "control.product.GetById"
+	const op = "control.product.GetWithItemsById"
 
 	param := chi.URLParam(r, "id")
 	productId, err := strconv.ParseInt(param, 10, 64)

@@ -13,6 +13,7 @@ var (
 	ErrDatabaseTimeout = errors.New("database timeout")
 	ErrInspectedSQL    = errors.New("inspected SQL")
 	ErrNoFieldsUpdate  = errors.New("no fields to update")
+	ErrUnknownStatus   = errors.New("unknown delivery status")
 )
 
 type AppErr struct {

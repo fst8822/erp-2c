@@ -298,3 +298,336 @@ render.Bind(r, &req)
 2. req.Bind(r)               ← вызывает твой метод валидации
     ↓
 return error (или nil)
+
+
+delivery
+func DeliveryFromDTO(dto DeliveryToSave) (*Delivery, error) {
+	items := make([]DeliveryItem, 0, len(dto.Items))
+
+	for _, i := range dto.Items {
+		item, err := NewDeliveryItem(i.ProductID, i.ItemPrice, i.Quantity)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return NewDelivery(items, dto.RecipientGoods, dto.Address)
+}
+
+func (d *Delivery) ChangeStatus(status DeliveryStatus) error {
+	if err := status.IsValid(); err != nil {
+		return err
+	}
+
+	// пример бизнес-правила
+	if d.status == StatusCancelled {
+		return ErrDeliveryAlreadyCancelled
+	}
+
+	d.status = status
+	return nil
+}
+
+func NewDelivery(
+	items []DeliveryItem,
+	recipientGoods string,
+	address string,
+) (*Delivery, error) {
+
+	if len(items) == 0 {
+		return nil, ErrEmptyDeliveryItems
+	}
+	if recipientGoods == "" {
+		return nil, ErrEmptyRecipient
+	}
+	if address == "" {
+		return nil, ErrEmptyAddress
+	}
+
+	d := &Delivery{
+		items:          items,
+		recipientGoods: recipientGoods,
+		address:        address,
+		status:         StatusCreated,
+		createdAt:      time.Now(),
+	}
+
+	d.recalculateTotal()
+
+	return d, nil
+}
+
+package model
+
+type DeliveryItem struct {
+	ProductID int64
+	ItemPrice int64
+	Quantity  int64
+}
+
+func NewDeliveryItem(
+	productID int64,
+	itemPrice int64,
+	quantity int64,
+) (DeliveryItem, error) {
+
+	if productID <= 0 {
+		return DeliveryItem{}, ErrInvalidProduct
+	}
+	if itemPrice <= 0 {
+		return DeliveryItem{}, ErrInvalidPrice
+	}
+	if quantity <= 0 {
+		return DeliveryItem{}, ErrInvalidQuantity
+	}
+
+	return DeliveryItem{
+		ProductID: productID,
+		ItemPrice: itemPrice,
+		Quantity:  quantity,
+	}, nil
+}
+
+func (i DeliveryItem) Total() int64 {
+	return i.ItemPrice * i.Quantity
+}
+
+package model
+
+import "erp-2c/lib/types"
+
+type DeliveryStatus string
+
+const (
+	StatusCreated   DeliveryStatus = "CREATED"
+	StatusAccepted  DeliveryStatus = "ACCEPTED"
+	StatusShipped   DeliveryStatus = "SHIPPED"
+	StatusDelivered DeliveryStatus = "DELIVERED"
+	StatusCancelled DeliveryStatus = "CANCELLED"
+)
+
+func NewDeliveryStatus(s string) (DeliveryStatus, error) {
+	status := DeliveryStatus(s)
+	if err := status.IsValid(); err != nil {
+		return "", err
+	}
+	return status, nil
+}
+
+func (s DeliveryStatus) IsValid() error {
+	switch s {
+	case StatusCreated, StatusAccepted, StatusShipped, StatusDelivered, StatusCancelled:
+		return nil
+	default:
+		return types.NewAppErr(string(s), types.ErrUnknownStatus)
+	}
+}
+
+///update
+package model
+
+import "time"
+
+// ====================
+// Доменные модели
+// ====================
+type DeliveryItem struct {
+	Product   ProductDomain
+	ItemPrice int64
+	Quantity  int64
+}
+
+func (i *DeliveryItem) TotalAmount() int64 {
+	return i.ItemPrice * i.Quantity
+}
+
+type DeliveryItemDomain struct {
+	Id             int64
+	DeliveryItems  []DeliveryItem
+	RecipientGoods string
+	Address        string
+	StatusDelivery DeliveryStatus
+	CreatedAt      time.Time
+	TotalAmount    int64
+}
+
+// ====================
+// Методы для работы с товарами
+// ====================
+
+// Добавление товара
+func (d *DeliveryItemDomain) AddItem(item DeliveryItem) {
+	d.DeliveryItems = append(d.DeliveryItems, item)
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// Удаление товара по индексу
+func (d *DeliveryItemDomain) RemoveItem(index int) {
+	if index < 0 || index >= len(d.DeliveryItems) {
+		return
+	}
+	d.DeliveryItems = append(d.DeliveryItems[:index], d.DeliveryItems[index+1:]...)
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// Обновление количества/цены товара по индексу
+func (d *DeliveryItemDomain) UpdateItem(index int, item DeliveryItem) {
+	if index < 0 || index >= len(d.DeliveryItems) {
+		return
+	}
+	d.DeliveryItems[index] = item
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// ====================
+// Внутренний метод для синхронизации суммы
+// ====================
+func (d *DeliveryItemDomain) updateTotal() {
+	var total int64
+	for _, item := range d.DeliveryItems {
+		total += item.TotalAmount()
+	}
+	d.TotalAmount = total
+}
+
+// ❌ Ошибка 1: Двойной Rollback
+defer tx.Rollback()
+if err := tx.Commit(); err != nil {
+    return err  // Rollback вызовется снова!
+}
+
+// ❌ Ошибка 2: Игнорируем ошибку Rollback
+defer tx.Rollback()  // Ошибка может быть, но мы ее игнорируем
+
+// ❌ Ошибка 3: Rollback после успешного Commit
+if err := tx.Commit(); err != nil {
+    return err
+}
+defer tx.Rollback()  // Слишком поздно!
+
+
+committed := false
+
+defer func() {
+    if committed {
+        return
+    }
+
+    if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+        sLogger.Error("rollback failed", sl.Err(err))
+    } else {
+        sLogger.Debug("transaction rolled back")
+    }
+}()
+
+if err := tx.Commit(); err != nil {
+    return err
+}
+committed = true
+
+
+_, err := tx.CopyFrom(
+	ctx,
+	pgx.Identifier{"delivery_items"},
+	[]string{"delivery_id", "product_id", "quantity", "item_price"},
+	pgx.CopyFromRows(
+		deliveryItemsToCopyRows(delivery.ID, delivery.DeliveryItemsDB),
+	),
+)
+if err != nil {
+	return nil, types.NewAppErr(
+		"failed to copy delivery items",
+		errors.Join(err, types.ErrInspectedSQL),
+	)
+}
+
+
+**********
+BatchSize
+UPDATE delivery d
+SET status = u.status
+FROM unnest($1::int[], $2::text[]) AS u(id, status)
+WHERE d.id = u.id;
+
+ids := make([]int, 0, len(deliveries))
+statuses := make([]string, 0, len(deliveries))
+
+for _, d := range deliveries {
+	ids = append(ids, d.ID)
+	statuses = append(statuses, d.Status)
+}
+
+_, err := d.db.Exec(query, pq.Array(ids), pq.Array(statuses))
+return err
+
+**
+UPDATE delivery
+SET status = $1
+WHERE id = ANY($2::bigint[]);
+
+ids := make([]int64, 0, len(deliveries))
+for _, d := range deliveries {
+	ids = append(ids, d.ID)
+}
+
+_, err := d.db.Exec(query, status, pq.Array(ids))
+
+
+***
+const batchSize = 500 // или 1000–5000, зависит от БД и объёма данных
+
+var valueStrings []string
+var valueArgs []interface{}
+
+for i, item := range items {
+    valueStrings = append(valueStrings, "(?, ?, ?, ?)")
+    valueArgs = append(valueArgs, item.ID, item.Status, item.CreatedAt, item.Payload)
+
+    if len(valueStrings) == batchSize || i == len(items)-1 {
+        // Формируем запрос
+        stmt := fmt.Sprintf(
+            "INSERT INTO deliveries (id, status, created_at, payload) VALUES %s",
+            strings.Join(valueStrings, ","),
+        )
+
+        _, err := db.Exec(stmt, valueArgs...)
+        if err != nil {
+            // обработка ошибки
+        }
+
+        // Сбрасываем для следующего батча
+        valueStrings = valueStrings[:0]
+        valueArgs = valueArgs[:0]
+    }
+}
+
+const batchSize = 500 // 100–1000, зависит от БД и количества полей
+
+for i := 0; i < len(deliveries); i += batchSize {
+    end := i + batchSize
+    if end > len(deliveries) {
+        end = len(deliveries)
+    }
+
+    batch := deliveries[i:end]
+
+    // Собираем placeholders и значения
+    var valueStrings []string
+    var valueArgs []interface{}
+
+    for _, d := range batch {
+        valueStrings = append(valueStrings, "(?, ?, ?)")
+        valueArgs = append(valueArgs, d.ID, d.Status, d.CreatedAt)
+    }
+
+    stmt := fmt.Sprintf(
+        "INSERT INTO deliveries (id, status, created_at) VALUES %s",
+        strings.Join(valueStrings, ","),
+    )
+
+    _, err := db.Exec(stmt, valueArgs...)
+    if err != nil {
+        // обработка ошибки
+    }
+}

@@ -22,6 +22,7 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 	authController := controller.NewAuthController(serviceManager, validate)
 	userController := controller.NewUserController(serviceManager, validate)
 	productController := controller.NewProductController(serviceManager, validate)
+	deliveryController := controller.NewDeliveryController(serviceManager, validate)
 
 	router.Route("/api/v1", func(r chi.Router) {
 
@@ -42,11 +43,17 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 				r.Post("/", productController.Save)
 				r.Get("/", productController.GetAll)
 				r.Get("/{id}", productController.GetById)
-				//r.Get("/{name}", productController.GetByName)
 				r.Put("/{id}", productController.UpdateById)
 				r.Delete("/{id}", productController.DeleteById)
 			})
 
+			r.Route("/delivery", func(r chi.Router) {
+				r.Post("/", deliveryController.Save)
+				r.Get("/", deliveryController.GetAll)
+				r.Get("/{id}", deliveryController.GetById)
+				r.Put("/{id}", deliveryController.UpdateById)
+				r.Delete("/{id}", deliveryController.DeleteById)
+			})
 		})
 	})
 

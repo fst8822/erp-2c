@@ -5,13 +5,10 @@ import (
 	"erp-2c/model"
 	"erp-2c/store"
 	"log/slog"
-
-	"github.com/go-playground/validator/v10"
 )
 
 type UserService struct {
-	store    *store.Store
-	validate *validator.Validate
+	store *store.Store
 }
 
 func NewUserService(store *store.Store) *UserService {
@@ -21,7 +18,7 @@ func NewUserService(store *store.Store) *UserService {
 }
 
 func (u *UserService) Save(userToSave model.SignUp) (*model.UserDomain, error) {
-	const op = "service.usecase.user.SAVE"
+	const op = "service.use_cases.user.SAVE"
 
 	userDB := model.UserDB{
 		FirstName: userToSave.FirstName,
@@ -50,7 +47,7 @@ func (u *UserService) Save(userToSave model.SignUp) (*model.UserDomain, error) {
 }
 
 func (u *UserService) GetById(userId int64) (*model.UserDomain, error) {
-	const op = "service.usecase.user.GetById"
+	const op = "service.use_cases.user.GetById"
 
 	found, err := u.store.UserRepo.GetById(userId)
 	if err != nil {
@@ -70,7 +67,7 @@ func (u *UserService) GetById(userId int64) (*model.UserDomain, error) {
 }
 
 func (u *UserService) GetByLogin(userLogin string) (*model.UserDomain, error) {
-	const op = "service.usecase.user.GetById"
+	const op = "service.use_cases.user.GetWithItemsById"
 
 	found, err := u.store.UserRepo.GetByLogin(userLogin)
 	if err != nil {
