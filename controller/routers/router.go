@@ -2,6 +2,7 @@ package routers
 
 import (
 	"erp-2c/controller"
+	"erp-2c/controller/notify"
 	"erp-2c/security"
 	"erp-2c/service/use_cases"
 	"net/http"
@@ -23,12 +24,17 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 	userController := controller.NewUserController(serviceManager, validate)
 	productController := controller.NewProductController(serviceManager, validate)
 	deliveryController := controller.NewDeliveryController(serviceManager, validate)
+	managerWS := notify.NewManagerWS(serviceManager)
 
 	router.Route("/api/v1", func(r chi.Router) {
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/signup", authController.SignUp)
 			r.Post("/signin", authController.SignIn)
+		})
+
+		r.Route("/ws", func(r chi.Router) {
+			r.Get("/subscribe", managerWS.ServerWS)
 		})
 
 		r.Group(func(r chi.Router) {
@@ -54,6 +60,10 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 				r.Put("/{id}", deliveryController.UpdateById)
 				r.Delete("/{id}", deliveryController.DeleteById)
 			})
+
+			//r.Route("/subscribe", func(r chi.Router) {
+			//	r.Get("/", managerWS.ServerWS)
+			//})
 		})
 	})
 
