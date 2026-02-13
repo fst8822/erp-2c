@@ -49,7 +49,6 @@ func (m *ManagerWS) ServerWS(resp http.ResponseWriter, r *http.Request) {
 	m.addClient(client)
 
 	go client.aliveConnection(ctxTODO)
-	//go client.subscribe(ctxTODO)
 }
 
 func (m *ManagerWS) addClient(client *ClientWS) {

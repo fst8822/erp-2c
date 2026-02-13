@@ -102,6 +102,7 @@ func (w *WorkerPool) worker(ctx context.Context, workerId int, instanceID string
 
 			delivery.Status = model.SHIPPED
 			w.queue.Out() <- delivery
+
 			logger.Info("Worker completed",
 				slog.Int64("DeliveryID", delivery.ID))
 		}
