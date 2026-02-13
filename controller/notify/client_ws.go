@@ -133,6 +133,15 @@ func (c *ClientWS) aliveConnection(ctx context.Context) {
 				log.Error("Error send PING connection is closed", sl.Err(err))
 				return
 			}
+		default:
+			_, _, err := c.conn.ReadMessage()
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseMessage,
+					websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Error("Error read message from client, connection is closed", sl.Err(err))
+				}
+				return
+			}
 		}
 	}
 }
