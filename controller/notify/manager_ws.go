@@ -52,11 +52,18 @@ func (m *ManagerWS) ServerWS(resp http.ResponseWriter, r *http.Request) {
 	go client.writeMessage(ctxTODO)
 }
 
+func (m *ManagerWS) broadcast(ctx context.Context) {
+	for ws := range m.clients {
+		go ws.writeMessage(ctx)
+	}
+}
+
 func (m *ManagerWS) addClient(client *clientWS) {
 	m.Lock()
 	defer m.Unlock()
 	m.clients[client] = true
 }
+
 func (m *ManagerWS) removeClint(client *clientWS) {
 	m.Lock()
 	defer m.Unlock()
