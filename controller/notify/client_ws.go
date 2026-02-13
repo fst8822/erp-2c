@@ -122,26 +122,41 @@ func (c *ClientWS) aliveConnection(ctx context.Context) {
 			return
 
 		case <-ticket.C:
-			log.Info("PING")
-			err := c.conn.SetWriteDeadline(time.Now().Add(writeLimit))
-			if err != nil {
-				log.Error("error set WriteDeadline", sl.Err(err))
+			if c.ping(log) {
 				return
 			}
-			err = c.conn.WriteMessage(websocket.PingMessage, nil)
-			if err != nil {
-				log.Error("Error send PING connection is closed", sl.Err(err))
-				return
-			}
+
 		default:
-			_, _, err := c.conn.ReadMessage()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseMessage,
-					websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Error("Error read message from client, connection is closed", sl.Err(err))
-				}
+			if c.pong(log) {
 				return
 			}
 		}
 	}
+}
+
+func (c *ClientWS) pong(log *slog.Logger) bool {
+	_, _, err := c.conn.ReadMessage()
+	if err != nil {
+		if websocket.IsUnexpectedCloseError(err, websocket.CloseMessage,
+			websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			log.Error("Error read message from client, connection is closed", sl.Err(err))
+		}
+		return true
+	}
+	return false
+}
+
+func (c *ClientWS) ping(log *slog.Logger) bool {
+	log.Info("PING")
+	err := c.conn.SetWriteDeadline(time.Now().Add(writeLimit))
+	if err != nil {
+		log.Error("error set WriteDeadline", sl.Err(err))
+		return true
+	}
+	err = c.conn.WriteMessage(websocket.PingMessage, nil)
+	if err != nil {
+		log.Error("Error send PING connection is closed", sl.Err(err))
+		return true
+	}
+	return false
 }
