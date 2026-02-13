@@ -20,7 +20,7 @@ const bachSize = 4
 type Worker interface {
 	Run(ctx context.Context)
 }
-type WorkerPoolQueue struct {
+type WorkerPool struct {
 	store        *store.Store
 	queue        *collection.Queue
 	wg           *sync.WaitGroup
@@ -32,8 +32,8 @@ func NewWorkerPool(
 	store *store.Store,
 	queue *collection.Queue,
 	countWorkers int,
-	sec time.Duration) *WorkerPoolQueue {
-	return &WorkerPoolQueue{
+	sec time.Duration) *WorkerPool {
+	return &WorkerPool{
 		store:        store,
 		queue:        queue,
 		wg:           &sync.WaitGroup{},
@@ -41,7 +41,7 @@ func NewWorkerPool(
 		cron:         sec}
 }
 
-func (w *WorkerPoolQueue) Run(ctx context.Context) {
+func (w *WorkerPool) Run(ctx context.Context) {
 	const op = "lib.workers.worker_pool.Run"
 	instanceID := uuid.New().String()
 	logger := slog.With("op", op, "instanceID", instanceID)
@@ -78,7 +78,7 @@ func (w *WorkerPoolQueue) Run(ctx context.Context) {
 	}
 }
 
-func (w *WorkerPoolQueue) worker(ctx context.Context, workerId int, instanceID string) {
+func (w *WorkerPool) worker(ctx context.Context, workerId int, instanceID string) {
 	const op = "lib.workers.worker_pool.worker"
 	logger := slog.With(
 		"op", op,
@@ -108,7 +108,7 @@ func (w *WorkerPoolQueue) worker(ctx context.Context, workerId int, instanceID s
 	}
 }
 
-func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context, instanceID string) error {
+func (w *WorkerPool) loadDeliveries(ctx context.Context, instanceID string) error {
 	const op = "lib.workers.worker_pool.loadDeliveries"
 	logger := slog.With("op", op, "instanceID", instanceID)
 
@@ -152,7 +152,7 @@ func (w *WorkerPoolQueue) loadDeliveries(ctx context.Context, instanceID string)
 	return nil
 }
 
-func (w *WorkerPoolQueue) updateDBItem(instanceID string) {
+func (w *WorkerPool) updateDBItem(instanceID string) {
 	const op = "lib.workers.worker_pool.updateDBItem"
 	logger := slog.With("op", op, "instanceID", instanceID)
 
@@ -189,7 +189,7 @@ func (w *WorkerPoolQueue) updateDBItem(instanceID string) {
 	}
 }
 
-func (w *WorkerPoolQueue) GetTotalCount(groups map[model.DeliveryStatus][]int64) int {
+func (w *WorkerPool) GetTotalCount(groups map[model.DeliveryStatus][]int64) int {
 	var totalCount int
 	for _, ids := range groups {
 		totalCount += len(ids)

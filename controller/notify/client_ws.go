@@ -3,6 +3,7 @@ package notify
 import (
 	"context"
 	"erp-2c/lib/sl"
+	"erp-2c/model"
 	"fmt"
 	"log/slog"
 	"time"
@@ -10,11 +11,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type clientList map[*clientWS]bool
+type clientList map[*ClientWS]bool
 
 type Client interface {
-	readMessage(ctx context.Context)
-	writeMessage(ctx context.Context)
+	subscribe(ctx context.Context)
 }
 
 const (
@@ -24,72 +24,36 @@ const (
 	MessageSize  = 512
 )
 
-type clientWS struct {
+type ClientWS struct {
 	conn      *websocket.Conn
 	managerWS *ManagerWS
 	msgCH     chan string
+	event     chan model.DeliveryDB
 }
 
-func NewClientWS(conn *websocket.Conn, managerWS *ManagerWS) *clientWS {
-	return &clientWS{
+func NewClientWS(conn *websocket.Conn, managerWS *ManagerWS) *ClientWS {
+	return &ClientWS{
 		conn:      conn,
 		managerWS: managerWS,
 		msgCH:     make(chan string),
+		event:     make(chan model.DeliveryDB),
 	}
 }
 
-// todo where check error
-func (c *clientWS) readMessage(ctx context.Context) {
-	const OP = "controller.notify.client_ws.readMessage"
+func (c *ClientWS) subscribe(ctx context.Context) {
+	const OP = "controller.notify.client_ws.subscribe"
 	log := slog.With("OP", OP)
 
 	defer func() {
 		c.managerWS.removeClint(c)
 	}()
 
-	if err := c.initLimitRead(); err != nil {
-		log.Error("Error init limit to Read message", sl.Err(err))
-		return
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Context is don, exit from readMessage")
+			log.Info("Context is don, exit from subscribe")
 			return
-		default:
-			messageType, message, err := c.conn.ReadMessage()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseMessage,
-					websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Error("Error read message from client, connection is closed", sl.Err(err))
-				}
-				return
-			}
 
-			log.Info("read message from client",
-				slog.Int("messageType", messageType),
-				slog.String("message", string(message)),
-			)
-			c.msgCH <- string(message)
-		}
-	}
-}
-
-func (c *clientWS) writeMessage(ctx context.Context) {
-	const OP = "controller.notify.client_ws.writeMessage"
-	log := slog.With("OP", OP)
-
-	defer func() {
-		c.managerWS.removeClint(c)
-	}()
-	ticket := time.NewTicker(pingInterval)
-	defer ticket.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("Context is don, exit from writeMessage")
-			return
 		case message, ok := <-c.msgCH:
 			if !ok {
 				if err := c.conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
@@ -111,24 +75,11 @@ func (c *clientWS) writeMessage(ctx context.Context) {
 				log.Error("Error send message to client, connection is closed", sl.Err(err))
 				return
 			}
-
-		case <-ticket.C:
-			log.Info("PING")
-			err := c.conn.SetWriteDeadline(time.Now().Add(writeLimit))
-			if err != nil {
-				log.Error("error set WriteDeadline", sl.Err(err))
-				return
-			}
-			err = c.conn.WriteMessage(websocket.PingMessage, nil)
-			if err != nil {
-				log.Error("Error send PING connection is closed", sl.Err(err))
-				return
-			}
 		}
 	}
 }
 
-func (c *clientWS) initLimitRead() error {
+func (c *ClientWS) initLimitRead() error {
 	const OP = "controller.notify.client_ws.initLimitRead"
 	log := slog.With("OP", OP)
 
@@ -148,4 +99,40 @@ func (c *clientWS) initLimitRead() error {
 		return err
 	})
 	return nil
+}
+
+func (c *ClientWS) aliveConnection(ctx context.Context) {
+	const OP = "controller.notify.client_ws.aliveConnection"
+	log := slog.With("OP", OP)
+
+	defer func() {
+		c.managerWS.removeClint(c)
+	}()
+	if err := c.initLimitRead(); err != nil {
+		log.Error("Error set  init limit Read", sl.Err(err))
+		return
+	}
+	ticket := time.NewTicker(pingInterval)
+	defer ticket.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is don, exit from aliveConnection")
+			return
+
+		case <-ticket.C:
+			log.Info("PING")
+			err := c.conn.SetWriteDeadline(time.Now().Add(writeLimit))
+			if err != nil {
+				log.Error("error set WriteDeadline", sl.Err(err))
+				return
+			}
+			err = c.conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				log.Error("Error send PING connection is closed", sl.Err(err))
+				return
+			}
+		}
+	}
 }
