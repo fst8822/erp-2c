@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"erp-2c/controller/notify"
 	"erp-2c/model"
 )
 
@@ -31,4 +33,10 @@ type DeliveryService interface {
 	GetByStatus(status model.DeliveryStatus) (*model.DeliveryItemListDomain, error)
 	UpdateById(deliveryId int64, update model.UpdateStatus) error
 	DeleteById(deliveryId int64) error
+}
+
+type NotifyService interface {
+	Subscribe(ctx context.Context, client notify.Client)
+	AddClient(client notify.Client)
+	RemoveClint(client notify.Client)
 }

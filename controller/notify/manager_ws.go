@@ -7,7 +7,6 @@ import (
 	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -24,16 +23,14 @@ var (
 
 type ManagerWS struct {
 	services *use_cases.Manager
-	sync.RWMutex
-	clients clientList
 }
 
 func NewManagerWS(services *use_cases.Manager) *ManagerWS {
-	return &ManagerWS{services: services, clients: make(clientList)}
+	return &ManagerWS{services: services}
 }
 
-func (m *ManagerWS) ServerWS(resp http.ResponseWriter, r *http.Request) {
-	const OP = "controller.notify.manager_ws.ServerWS"
+func (m *ManagerWS) UpgradeConnection(resp http.ResponseWriter, r *http.Request) {
+	const OP = "controller.notify.manager_ws.UpgradeConnection"
 	logger := slog.With("OP", OP)
 	ctxTODO := context.TODO()
 
@@ -44,28 +41,7 @@ func (m *ManagerWS) ServerWS(resp http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logger.Info("has new connection", slog.Any("LocalAddr", conn.LocalAddr()))
-	client := NewClientWS(conn, m)
 
-	m.addClient(client)
-
-	go client.aliveConnection(ctxTODO)
-}
-
-func (m *ManagerWS) addClient(client *ClientWS) {
-	m.Lock()
-	defer m.Unlock()
-	m.clients[client] = true
-}
-
-func (m *ManagerWS) removeClint(client *ClientWS) {
-	m.Lock()
-	defer m.Unlock()
-	if ok := m.clients[client]; ok {
-		err := client.conn.Close()
-		if err != nil {
-			slog.Error("Can not close client connection", sl.Err(err))
-			return
-		}
-		delete(m.clients, client)
-	}
+	client := NewClientWS(conn, m.services)
+	m.services.NotifyService.Subscribe(ctxTODO, client)
 }

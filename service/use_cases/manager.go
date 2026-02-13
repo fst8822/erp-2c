@@ -11,6 +11,7 @@ type Manager struct {
 	ProductService  service.ProductService
 	AuthService     service.AuthService
 	DeliveryService service.DeliveryService
+	NotifyService   service.NotifyService
 }
 
 func NewManager(storeRepo *store.Store) (*Manager, error) {
@@ -22,11 +23,13 @@ func NewManager(storeRepo *store.Store) (*Manager, error) {
 	productService := NewProductService(storeRepo)
 	authService := NewAuthService(storeRepo, userService)
 	deliveryService := NewDeliveryService(storeRepo)
+	notifyService := NewNotifyService()
 
 	return &Manager{
 		UserService:     userService,
 		ProductService:  productService,
 		AuthService:     authService,
 		DeliveryService: deliveryService,
+		NotifyService:   notifyService,
 	}, nil
 }

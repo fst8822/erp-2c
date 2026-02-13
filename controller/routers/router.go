@@ -34,7 +34,7 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 		})
 
 		r.Route("/ws", func(r chi.Router) {
-			r.Get("/subscribe", managerWS.ServerWS)
+			r.Get("/subscribe", managerWS.UpgradeConnection)
 		})
 
 		r.Group(func(r chi.Router) {
@@ -62,7 +62,7 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 			})
 
 			//r.Route("/subscribe", func(r chi.Router) {
-			//	r.Get("/", managerWS.ServerWS)
+			//	r.Get("/", managerWS.UpgradeConnection)
 			//})
 		})
 	})

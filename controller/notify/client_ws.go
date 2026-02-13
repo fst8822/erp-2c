@@ -4,13 +4,15 @@ import (
 	"context"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
+	"erp-2c/service"
+	"erp-2c/service/use_cases"
 	"log/slog"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-type clientList map[*ClientWS]bool
+type ClientList map[ClientWS]bool
 
 type Client interface {
 	subscribe(ctx context.Context)
@@ -24,18 +26,16 @@ const (
 )
 
 type ClientWS struct {
-	conn      *websocket.Conn
-	managerWS *ManagerWS
-	msgCH     chan string
-	event     chan model.DeliveryDB
+	Conn     *websocket.Conn
+	Services *use_cases.Manager
+	Event    chan model.DeliveryDB
 }
 
-func NewClientWS(conn *websocket.Conn, managerWS *ManagerWS) *ClientWS {
+func NewClientWS(conn *websocket.Conn, services *use_cases.Manager) *ClientWS {
 	return &ClientWS{
-		conn:      conn,
-		managerWS: managerWS,
-		msgCH:     make(chan string),
-		event:     make(chan model.DeliveryDB),
+		Conn:     conn,
+		Services: services,
+		Event:    make(chan model.DeliveryDB),
 	}
 }
 
@@ -44,7 +44,7 @@ func (c *ClientWS) subscribe(ctx context.Context) {
 	log := slog.With("OP", OP)
 
 	defer func() {
-		c.managerWS.removeClint(c)
+		c.Services.NotifyService.RemoveClint(c)
 	}()
 
 	for {
@@ -53,21 +53,21 @@ func (c *ClientWS) subscribe(ctx context.Context) {
 			log.Info("Context is don, exit from subscribe")
 			return
 
-		case event, ok := <-c.event:
+		case event, ok := <-c.Event:
 			if !ok {
-				if err := c.conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
+				if err := c.Conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
 					log.Error("Connection is closed", sl.Err(err))
 				}
 				return
 			}
 
 			log.Info("Send message to client", slog.AnyValue(event))
-			err := c.conn.SetWriteDeadline(time.Now().Add(writeLimit))
+			err := c.Conn.SetWriteDeadline(time.Now().Add(writeLimit))
 			if err != nil {
 				log.Error("error set WriteDeadline", sl.Err(err))
 				return
 			}
-			err = c.conn.WriteJSON(event)
+			err = c.Conn.WriteJSON(event)
 			if err != nil {
 				log.Error("Error send message to client, connection is closed", sl.Err(err))
 				return
@@ -81,7 +81,7 @@ func (c *ClientWS) aliveConnection(ctx context.Context) {
 	log := slog.With("OP", OP)
 
 	defer func() {
-		c.managerWS.removeClint(c)
+		c.Services.NotifyService.RemoveClint(c)
 	}()
 	if err := c.initLimitRead(); err != nil {
 		log.Error("Error set  init limit Read", sl.Err(err))
@@ -98,12 +98,12 @@ func (c *ClientWS) aliveConnection(ctx context.Context) {
 				return
 			case <-ticket.C:
 				log.Info("PING")
-				err := c.conn.SetWriteDeadline(time.Now().Add(writeLimit))
+				err := c.Conn.SetWriteDeadline(time.Now().Add(writeLimit))
 				if err != nil {
 					log.Error("error set WriteDeadline", sl.Err(err))
 					return
 				}
-				if err = c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				if err = c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 					log.Error("Error send PING connection is closed", sl.Err(err))
 					return
 				}
@@ -117,7 +117,7 @@ func (c *ClientWS) aliveConnection(ctx context.Context) {
 			log.Info("Context is done, exit from aliveConnection")
 			return
 		default:
-			_, _, err := c.conn.ReadMessage()
+			_, _, err := c.Conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseMessage,
 					websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -133,16 +133,16 @@ func (c *ClientWS) initLimitRead() error {
 	const OP = "controller.notify.client_ws.initLimitRead"
 	log := slog.With("OP", OP)
 
-	c.conn.SetReadLimit(MessageSize)
-	err := c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Conn.SetReadLimit(MessageSize)
+	err := c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	if err != nil {
 		log.Error("error set ReadDeadline", sl.Err(err))
 		return err
 	}
 
-	c.conn.SetPongHandler(func(appData string) error {
+	c.Conn.SetPongHandler(func(appData string) error {
 		log.Info("PONG RECEIVED")
-		err := c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		err := c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 		if err != nil {
 			log.Error("error Reset the ReadDeadline", sl.Err(err))
 		}
