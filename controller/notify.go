@@ -1,4 +1,4 @@
-package notify
+package controller
 
 import (
 	"context"
@@ -21,18 +21,26 @@ var (
 	}
 )
 
-type ManagerWS struct {
+type NotifyController struct {
 	services *use_cases.Manager
 }
 
-func NewManagerWS(services *use_cases.Manager) *ManagerWS {
-	return &ManagerWS{services: services}
+func NewNotifyController(services *use_cases.Manager) *NotifyController {
+	return &NotifyController{services: services}
 }
 
-func (m *ManagerWS) UpgradeConnection(resp http.ResponseWriter, r *http.Request) {
+func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.Request) {
 	const OP = "controller.notify.manager_ws.UpgradeConnection"
 	logger := slog.With("OP", OP)
 	ctxTODO := context.TODO()
+
+	userId := r.Context().Value("userIdKey")
+	id, ok := userId.(int64)
+	if !ok {
+		logger.Error("User id dont exist on context")
+		response.Unauthorized("Unauthorized").SendResponse(resp, r)
+		return
+	}
 
 	conn, err := websocketUpgrade.Upgrade(resp, r, nil)
 	if err != nil {
@@ -42,6 +50,5 @@ func (m *ManagerWS) UpgradeConnection(resp http.ResponseWriter, r *http.Request)
 	}
 	logger.Info("has new connection", slog.Any("LocalAddr", conn.LocalAddr()))
 
-	client := NewClientWS(conn, m.services)
-	m.services.NotifyService.Subscribe(ctxTODO, client)
+	n.services.NotifyService.Subscribe(ctxTODO, conn, id)
 }
