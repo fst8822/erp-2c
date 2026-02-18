@@ -1,10 +1,12 @@
 package pg
 
 import (
+	"context"
 	"database/sql"
 	"erp-2c/lib/types"
 	"erp-2c/model"
 	"errors"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -21,8 +23,8 @@ func NewDeliveryRepository(db *sqlx.DB) *DeliveryRepository {
 func (d *DeliveryRepository) SaveWithItems(
 	tx *sqlx.Tx, deliveryWithItems model.DeliveryWithItemsDB) (*model.DeliveryDB, error) {
 
-	queryOne := `INSERT INTO delivery(recipient, address, status, created_at)  
-			  		VALUES ($1, $2, $3, $4) RETURNING id`
+	queryOne := `INSERT INTO delivery(recipient, address, status, created_at, user_id)  
+			  		VALUES ($1, $2, $3, $4, $5) RETURNING id`
 
 	err := tx.QueryRowx(
 		queryOne,
@@ -30,6 +32,7 @@ func (d *DeliveryRepository) SaveWithItems(
 		deliveryWithItems.DeliveryDB.Address,
 		deliveryWithItems.DeliveryDB.Status,
 		deliveryWithItems.DeliveryDB.CreatedAt,
+		deliveryWithItems.DeliveryDB.UserID,
 	).Scan(&deliveryWithItems.DeliveryDB.ID)
 
 	if err != nil {
@@ -49,36 +52,6 @@ func (d *DeliveryRepository) SaveWithItems(
 			errors.Join(err, types.ErrInspectedSQL))
 	}
 	return &deliveryWithItems.DeliveryDB, nil
-}
-
-func (d *DeliveryRepository) Save(tx *sqlx.Tx, deliveryDB model.DeliveryDB) (*model.DeliveryDB, error) {
-	queryOne := `INSERT INTO delivery(recipient, address, status, created_at)  
-			  		VALUES ($1, $2, $3, $4) RETURNING id`
-
-	var err error
-	if tx == nil {
-		err = d.db.QueryRowx(
-			queryOne,
-			deliveryDB.Recipient,
-			deliveryDB.Address,
-			deliveryDB.Status,
-			deliveryDB.CreatedAt,
-		).Scan(&deliveryDB.ID)
-	} else {
-		err = tx.QueryRowx(
-			queryOne,
-			deliveryDB.Recipient,
-			deliveryDB.Address,
-			deliveryDB.Status,
-			deliveryDB.CreatedAt,
-		).Scan(&deliveryDB.ID)
-	}
-
-	if err != nil {
-		return nil, types.NewAppErr("inspected SQL error, failed to insert delivery",
-			errors.Join(err, types.ErrInspectedSQL))
-	}
-	return &deliveryDB, err
 }
 
 func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryWithItemsDB, error) {
@@ -120,25 +93,35 @@ func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*m
 	return &deliveryWithItems, nil
 }
 
-func (d *DeliveryRepository) LockAndGetDeliveries(
-	tx *sqlx.Tx, status model.DeliveryStatus, instanceID string) ([]model.DeliveryDB, error) {
+func (d *DeliveryRepository) LockAndGetDeliveries(status model.DeliveryStatus) ([]model.DeliveryDB, error) {
+
 	var delivers []model.DeliveryDB
-	query := `UPDATE delivery SET locked_until = now() + interval '5 minutes', instance_id = $1
+	query := `UPDATE delivery SET locked_until = now() + interval '5 minutes'
 	WHERE id IN (
-	    SELECT id FROM delivery WHERE status = $2 AND (locked_until is null OR locked_until < now())
+	    SELECT id FROM delivery WHERE status = $1 AND (locked_until is null OR locked_until < now())
 	    LIMIT 1
 	    FOR UPDATE SKIP LOCKED
-	) RETURNING id, recipient, address, status, created_at`
+	) RETURNING id, recipient, address, status, created_at, user_id`
 
-	var err error
-	if tx == nil {
-		err = d.db.Select(&delivers, query, instanceID, status)
-	} else {
-		err = tx.Select(&delivers, query, instanceID, status)
+	ctx := context.TODO()
+	tx, err := d.db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
+	defer func() { tx.Rollback() }()
+
+	err = tx.Select(&delivers, query, status)
 	if err != nil {
 		return nil, types.NewAppErr(" inspected SQL error, failed to get deliveries by status",
 			errors.Join(err, types.ErrInspectedSQL))
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to commit transaction %w", err)
 	}
 	return delivers, nil
 }
