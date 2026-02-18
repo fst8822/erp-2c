@@ -18,7 +18,9 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
+
 	validate := validator.New()
+
 	authController := controller.NewAuthController(serviceManager, validate)
 	userController := controller.NewUserController(serviceManager, validate)
 	productController := controller.NewProductController(serviceManager, validate)
@@ -61,7 +63,7 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 			})
 
 			//r.Route("/subscribe", func(r chi.Router) {
-			//	r.Get("/", managerWS.UpgradeConnection)
+			//	r.Get("/", notifyController.UpgradeConnection)
 			//})
 		})
 	})

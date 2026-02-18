@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"erp-2c/model"
-
-	"github.com/gorilla/websocket"
 )
 
 type AuthService interface {
@@ -37,5 +35,8 @@ type DeliveryService interface {
 }
 
 type NotifyService interface {
-	Subscribe(ctx context.Context, conn *websocket.Conn, userId int64)
+	Subscribe(ctx context.Context, client *model.ClientWS)
+	SendNotify(notification model.Notification)
+	AddClient(client *model.ClientWS)
+	RemoveClient(client *model.ClientWS)
 }
