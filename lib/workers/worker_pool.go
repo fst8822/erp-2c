@@ -2,17 +2,14 @@ package workers
 
 import (
 	"context"
-	"database/sql"
 	"erp-2c/lib/collection"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
+	"erp-2c/service"
 	"erp-2c/store"
-	"errors"
 	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 const bachSize = 4
@@ -21,7 +18,8 @@ type Worker interface {
 	Run(ctx context.Context)
 }
 type WorkerPool struct {
-	store        *store.Store
+	notify       service.NotifyService
+	deliveryRepo store.DeliveryRepository
 	queue        *collection.Queue
 	wg           *sync.WaitGroup
 	countWorkers int
@@ -29,33 +27,34 @@ type WorkerPool struct {
 }
 
 func NewWorkerPool(
-	store *store.Store,
+	notify service.NotifyService,
+	delivery store.DeliveryRepository,
 	queue *collection.Queue,
 	countWorkers int,
-	sec time.Duration) *WorkerPool {
+	cron time.Duration) *WorkerPool {
 	return &WorkerPool{
-		store:        store,
+		notify:       notify,
+		deliveryRepo: delivery,
 		queue:        queue,
 		wg:           &sync.WaitGroup{},
 		countWorkers: countWorkers,
-		cron:         sec}
+		cron:         cron}
 }
 
 func (w *WorkerPool) Run(ctx context.Context) {
 	const op = "lib.workers.worker_pool.Run"
-	instanceID := uuid.New().String()
-	logger := slog.With("op", op, "instanceID", instanceID)
+	logger := slog.With("op", op)
 
 	workerCtx, cancelWorker := context.WithCancel(ctx)
 	defer cancelWorker()
 
 	for i := 0; i < w.countWorkers; i++ {
 		w.wg.Add(1)
-		go w.worker(workerCtx, i, instanceID)
+		go w.worker(workerCtx, i)
 	}
 
 	w.wg.Add(1)
-	go w.updateDBItem(instanceID)
+	go w.updateDBItem()
 
 	ticker := time.NewTicker(w.cron * time.Second)
 	defer ticker.Stop()
@@ -70,7 +69,7 @@ func (w *WorkerPool) Run(ctx context.Context) {
 			logger.Info("Worker pool stopped")
 			return
 		case <-ticker.C:
-			err := w.loadDeliveries(workerCtx, instanceID)
+			err := w.loadDeliveries(workerCtx)
 			if err != nil {
 				logger.Error("Failed to load deliveries", sl.Err(err))
 			}
@@ -78,11 +77,10 @@ func (w *WorkerPool) Run(ctx context.Context) {
 	}
 }
 
-func (w *WorkerPool) worker(ctx context.Context, workerId int, instanceID string) {
+func (w *WorkerPool) worker(ctx context.Context, workerId int) {
 	const op = "lib.workers.worker_pool.worker"
 	logger := slog.With(
 		"op", op,
-		"instanceID", instanceID,
 		"workerId", workerId)
 
 	defer w.wg.Done()
@@ -109,29 +107,13 @@ func (w *WorkerPool) worker(ctx context.Context, workerId int, instanceID string
 	}
 }
 
-func (w *WorkerPool) loadDeliveries(ctx context.Context, instanceID string) error {
+func (w *WorkerPool) loadDeliveries(ctx context.Context) error {
 	const op = "lib.workers.worker_pool.loadDeliveries"
-	logger := slog.With("op", op, "instanceID", instanceID)
+	logger := slog.With("op", op)
 
-	tx, err := w.store.BeginTxx(ctx)
+	deliveriesDB, err := w.deliveryRepo.LockAndGetDeliveries(model.CREATED)
 	if err != nil {
-		logger.Error("Failed to open transaction", sl.Err(err))
-		return err
-	}
-	committed := false
-	defer func() {
-		if committed {
-			return
-		}
-		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			logger.Error("Failed to Rollback transaction", sl.Err(err))
-		} else {
-			logger.Info("Transaction Rollback is successful")
-		}
-	}()
-
-	deliveriesDB, err := w.store.Delivery.LockAndGetDeliveries(tx, model.CREATED, instanceID)
-	if err != nil {
+		logger.Error("failed Load deliveries", sl.Err(err))
 		return err
 	}
 
@@ -144,32 +126,38 @@ func (w *WorkerPool) loadDeliveries(ctx context.Context, instanceID string) erro
 		case w.queue.In() <- deliveriesDB[i]:
 		}
 	}
-	err = tx.Commit()
-	if err != nil {
-		logger.Error("Failed to commit transaction", sl.Err(err))
-		return err
-	}
-	committed = true
 	return nil
 }
 
-func (w *WorkerPool) updateDBItem(instanceID string) {
+func (w *WorkerPool) updateDBItem() {
 	const op = "lib.workers.worker_pool.updateDBItem"
-	logger := slog.With("op", op, "instanceID", instanceID)
+	logger := slog.With("op", op)
 
 	groups := make(map[model.DeliveryStatus][]int64, 100)
 	ticket := time.NewTicker(3 * time.Second)
-	defer w.wg.Done()
 	defer ticket.Stop()
+	defer w.wg.Done()
 
 	for deliveryDB := range w.queue.Out() {
 		groups[deliveryDB.Status] = append(groups[deliveryDB.Status], deliveryDB.ID)
 		logger.Info("Start processing out channel", slog.Int64("DeliveryID", deliveryDB.ID))
+
+		go func(deliveryDB model.DeliveryDB) {
+			notification := model.Notification{
+				DeliveryId: deliveryDB.ID,
+				Status:     deliveryDB.Status,
+				CreatedAt:  time.Now(),
+				UserID:     deliveryDB.UserID,
+			}
+			logger.Info("Start Send Notification")
+			w.notify.SendNotify(notification)
+		}(deliveryDB)
+
 		select {
 		case <-ticket.C:
 			countRows := w.GetTotalCount(groups)
 			logger.Info("Start update to db", slog.Int("bachSize", countRows))
-			err := w.store.Delivery.UpdateStatusByIds(nil, groups)
+			err := w.deliveryRepo.UpdateStatusByIds(nil, groups)
 			if err != nil {
 				logger.Error("Failed send update deliveries", sl.Err(err))
 				return
@@ -179,7 +167,7 @@ func (w *WorkerPool) updateDBItem(instanceID string) {
 			countRows := w.GetTotalCount(groups)
 			if countRows > bachSize {
 				logger.Info("Start update to db", slog.Int("bachSize", len(groups)))
-				err := w.store.Delivery.UpdateStatusByIds(nil, groups)
+				err := w.deliveryRepo.UpdateStatusByIds(nil, groups)
 				if err != nil {
 					logger.Error("Failed send update deliveries", sl.Err(err))
 					return
