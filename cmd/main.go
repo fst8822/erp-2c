@@ -64,7 +64,12 @@ func run() error {
 	}
 
 	queue := collection.NewQueue(10)
-	workPoll := workers.NewWorkerPool(storeRepo, queue, 5, 5)
+	workPoll := workers.NewWorkerPool(
+		serviceManager.NotifyService,
+		storeRepo.Delivery,
+		queue,
+		5,
+		5)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
