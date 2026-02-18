@@ -41,7 +41,14 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 		response.ValidationError(err).SendResponse(w, r)
 		return
 	}
-	DeliveryItems := requestBody.MapToDomain()
+	ID := r.Context().Value("userIdKey")
+	userID, ok := ID.(int64)
+	if !ok {
+		sLogger.Error("failed failed get user from context")
+		response.InternalServerError().SendResponse(w, r)
+		return
+	}
+	DeliveryItems := requestBody.MapToDomain(userID)
 	saved, err := d.services.DeliveryService.Save(DeliveryItems)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)

@@ -30,6 +30,7 @@ type DeliveryDB struct {
 	Address   string         `db:"address"`
 	Status    DeliveryStatus `db:"status"`
 	CreatedAt time.Time      `db:"created_at"`
+	UserID    int64          `db:"user_id"`
 }
 
 type ItemsDB struct {
@@ -56,6 +57,7 @@ type DeliverDomain struct {
 	Address       string         `json:"address"`
 	Status        DeliveryStatus `json:"status"`
 	CreatedAt     time.Time      `json:"created_at"`
+	UserID        int64          `json:"user_id"`
 	DeliverAmount int64          `json:"deliver_amount"`
 }
 
@@ -107,7 +109,7 @@ type UpdateStatus struct {
 	Status     DeliveryStatus `json:"status" validate:"required,min=1"`
 }
 
-func (d *DeliveryToSave) MapToDomain() DeliveryItemsDomain {
+func (d *DeliveryToSave) MapToDomain(UserID int64) DeliveryItemsDomain {
 	var items = make([]ItemDomain, 0, len(d.Items))
 
 	for _, item := range d.Items {
@@ -125,6 +127,7 @@ func (d *DeliveryToSave) MapToDomain() DeliveryItemsDomain {
 			Address:   d.Address,
 			Status:    CREATED,
 			CreatedAt: time.Now(),
+			UserID:    UserID,
 		},
 		Items: items,
 	}
@@ -147,6 +150,7 @@ func (i *DeliveryItemsDomain) MapToDBWithItems() DeliveryWithItemsDB {
 			Address:   i.Address,
 			Status:    i.Status,
 			CreatedAt: i.CreatedAt,
+			UserID:    i.UserID,
 		},
 		DeliveryItemsDB: items,
 	}
@@ -171,6 +175,7 @@ func (d *DeliveryWithItemsDB) MapToDomain() DeliveryItemsDomain {
 			Address:   d.DeliveryDB.Address,
 			Status:    d.DeliveryDB.Status,
 			CreatedAt: d.DeliveryDB.CreatedAt,
+			UserID:    d.DeliveryDB.UserID,
 		},
 		Items: items,
 	}
