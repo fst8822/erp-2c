@@ -124,8 +124,9 @@ func run() error {
 		}
 		return err
 	}
-	wg.Wait()
 
+	wg.Wait()
+	serviceManager.NotifyService.Shutdown()
 	slog.Info("Server shutdown gracefully")
 	return nil
 }
