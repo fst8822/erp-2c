@@ -39,4 +39,5 @@ type NotifyService interface {
 	SendNotify(notification model.Notification)
 	AddClient(client *model.ClientWS)
 	RemoveClient(client *model.ClientWS)
+	Shutdown()
 }
