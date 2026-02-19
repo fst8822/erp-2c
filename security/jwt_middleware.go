@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-type contextKey string
+type ContextKey string
 
 const (
 	authorization            = "Authorization"
 	bearer                   = "Bearer"
-	userIdKey     contextKey = "id"
-	userRole      contextKey = "role"
+	UserIdKey     ContextKey = "id"
+	UserRole      ContextKey = "role"
 )
 
 func JwtMiddleware(next http.Handler) http.Handler {
@@ -54,8 +54,8 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), userIdKey, id)
-		ctx = context.WithValue(ctx, userRole, role)
+		ctx := context.WithValue(r.Context(), UserIdKey, id)
+		ctx = context.WithValue(ctx, UserRole, role)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
