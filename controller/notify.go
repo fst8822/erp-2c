@@ -5,6 +5,7 @@ import (
 	"erp-2c/lib/response"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
+	"erp-2c/security"
 	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
@@ -34,17 +35,16 @@ func NewNotifyController(services *use_cases.Manager) *NotifyController {
 func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.Request) {
 	const OP = "controller.notify.NotifyController.UpgradeConnection"
 	logger := slog.With("OP", OP)
-	ctxTODO := context.TODO()
 
-	//id := r.Context().Value("userIdKey")
-	//userID, ok := id.(int64)
+	id := r.Context().Value(security.UserIdKey)
+	userID, ok := id.(int64)
 
-	//if !ok {
-	//	logger.Error("user id not found in context")
-	//	response.Unauthorized("Unauthorized").SendResponse(resp, r)
-	//	return
-	//}
-	var userID int64 = 7
+	if !ok {
+		logger.Error("user id not found in context")
+		response.Unauthorized("Unauthorized").SendResponse(resp, r)
+		return
+	}
+
 	conn, err := websocketUpgrade.Upgrade(resp, r, nil)
 	if err != nil {
 		logger.Error("Error websocket Upgrade connection", sl.Err(err))
@@ -59,6 +59,6 @@ func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.R
 		Conn:   conn,
 		Cn:     make(chan model.Notification, model.NotificationBufferSize),
 	}
+	n.services.NotifyService.Subscribe(context.TODO(), client)
 	n.services.NotifyService.AddClient(client)
-	go n.services.NotifyService.Subscribe(ctxTODO, client)
 }
