@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"reflect"
 
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -105,13 +106,24 @@ func ValidationError(err error) Response {
 		field := e.Field()
 		switch e.Tag() {
 		case "required":
-			details[field] = fmt.Sprintf("field: %s is required field", e.Field())
+			details[field] = fmt.Sprintf("field: %s is required field", field)
 		case "email":
-			details[field] = fmt.Sprintf("field %s is invalid format, value: %s", e.Field(), e.Value())
+			details[field] = fmt.Sprintf("field %s is invalid format, value: %v", field, e.Value())
 		case "gte":
-			details[field] = fmt.Sprintf("field %s is invalid param: %s", e.Field(), e.Param())
+			details[field] = fmt.Sprintf("field %s is invalid param: %s", field, e.Param())
+		case "gt":
+			details[field] = fmt.Sprintf("field %s is invalid must be: %s, current value: %v",
+				e.Field(), e.Param(), e.Value())
+		case "min":
+			if e.Kind() == reflect.Slice || e.Kind() == reflect.Array {
+				details[field] = fmt.Sprintf("field %s must contain at least %s item(s)",
+					e.Field(), e.Param())
+			} else {
+				details[field] = fmt.Sprintf("field %s must be at least %s", e.Field(), e.Param())
+			}
+
 		default:
-			details[field] = fmt.Sprintf("validation error %s", e.Tag())
+			details[field] = fmt.Sprintf("validation error field %s: %s", field, e.Tag())
 		}
 	}
 	return Response{

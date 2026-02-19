@@ -18,16 +18,24 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
+
 	validate := validator.New()
+
 	authController := controller.NewAuthController(serviceManager, validate)
 	userController := controller.NewUserController(serviceManager, validate)
 	productController := controller.NewProductController(serviceManager, validate)
+	deliveryController := controller.NewDeliveryController(serviceManager, validate)
+	notifyController := controller.NewNotifyController(serviceManager)
 
 	router.Route("/api/v1", func(r chi.Router) {
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/signup", authController.SignUp)
 			r.Post("/signin", authController.SignIn)
+		})
+
+		r.Route("/ws", func(r chi.Router) {
+			r.Get("/subscribe", notifyController.UpgradeConnection)
 		})
 
 		r.Group(func(r chi.Router) {
@@ -42,11 +50,21 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 				r.Post("/", productController.Save)
 				r.Get("/", productController.GetAll)
 				r.Get("/{id}", productController.GetById)
-				//r.Get("/{name}", productController.GetByName)
 				r.Put("/{id}", productController.UpdateById)
 				r.Delete("/{id}", productController.DeleteById)
 			})
 
+			r.Route("/delivery", func(r chi.Router) {
+				r.Post("/", deliveryController.Save)
+				r.Get("/", deliveryController.GetAll)
+				r.Get("/{id}", deliveryController.GetById)
+				r.Put("/{id}", deliveryController.UpdateById)
+				r.Delete("/{id}", deliveryController.DeleteById)
+			})
+
+			//r.Route("/subscribe", func(r chi.Router) {
+			//	r.Get("/", notifyController.UpgradeConnection)
+			//})
 		})
 	})
 

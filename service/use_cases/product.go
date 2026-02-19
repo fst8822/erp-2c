@@ -16,7 +16,7 @@ func NewProductService(store *store.Store) *ProductService {
 }
 
 func (p *ProductService) Save(productToSave model.ProductToSave) (*model.ProductDomain, error) {
-	const op = "service.usescases.product.Save"
+	const op = "service.use_cases.product.Save"
 
 	productDB := model.ProductDB{
 		ProductName:  productToSave.ProductName,
@@ -29,7 +29,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 	saved, err := p.store.ProductRepo.Save(productDB)
 	if err != nil {
 		slog.Error("failed save product",
-			slog.String("product id", productToSave.ProductName), sl.ErrWithOP(err, op))
+			slog.String("product name", productToSave.ProductName), sl.ErrWithOP(err, op))
 		return nil, err
 	}
 
@@ -46,7 +46,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 }
 
 func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) {
-	const op = "service.usescases.product.GetById"
+	const op = "service.use_cases.product.GetWithItemsById"
 
 	product, err := p.store.ProductRepo.GetById(productId)
 	if err != nil {
@@ -66,7 +66,7 @@ func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) 
 }
 
 func (p *ProductService) GetByName(productName string) (*model.ProductDomain, error) {
-	const op = "service.usescases.product.GetByName"
+	const op = "service.use_cases.product.GetByName"
 
 	product, err := p.store.ProductRepo.GetByName(productName)
 	if err != nil {
@@ -85,8 +85,8 @@ func (p *ProductService) GetByName(productName string) (*model.ProductDomain, er
 	return &productDB, nil
 }
 
-func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
-	const op = "service.usescases.product.GetAll"
+func (p *ProductService) GetAll() ([]model.ProductDomain, error) {
+	const op = "service.use_cases.product.GetAll"
 
 	productsDB, err := p.store.ProductRepo.GetAll()
 	if err != nil {
@@ -107,11 +107,11 @@ func (p *ProductService) GetAll() (*[]model.ProductDomain, error) {
 		}
 		productsDomain = append(productsDomain, productDomain)
 	}
-	return &productsDomain, nil
+	return productsDomain, nil
 }
 
 func (p *ProductService) UpdateById(productId int64, productToUpdate model.ProductUpdate) error {
-	const op = "service.usescases.product.UpdateById"
+	const op = "service.use_cases.product.UpdateById"
 
 	if err := p.store.ProductRepo.UpdateById(productId, productToUpdate); err != nil {
 		slog.Error("failed to update product", sl.ErrWithOP(err, op))
@@ -121,7 +121,7 @@ func (p *ProductService) UpdateById(productId int64, productToUpdate model.Produ
 }
 
 func (p *ProductService) DeleteById(productId int64) error {
-	const op = "service.usescases.product.DeleteById"
+	const op = "service.use_cases.product.DeleteById"
 
 	if err := p.store.ProductRepo.DeleteById(productId); err != nil {
 		slog.Error("failed to delete product", sl.ErrWithOP(err, op))
