@@ -636,3 +636,86 @@ let socket = new WebSocket(ws://localhost:8080/ws)
 socket.onmessage = (event) => {console.log("received: ", event.data)}
 socket.send("Salam")
 
+
+func (n *NotifyService) shutdown() {
+	n.RWMutex.Lock()
+	defer n.RWMutex.Unlock()
+
+	for userID, conn := range n.clients {
+		conn.WriteMessage(websocket.CloseMessage, nil)
+		conn.Close()
+		delete(n.clients, userID)
+	}
+	close(n.notifications)
+}
+
+
+func (s *NotifyService) Subscribe(ctx context.Context, conn *websocket.Conn, id int64) {
+    ch := make(chan model.Notification, 10) // буфер чтобы не блокировать воркер
+    s.addClient(id, ch)
+
+    defer func() {
+        conn.Close()
+        s.removeClient(id)
+    }()
+
+    ticker := time.NewTicker(30 * time.Second)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case notification := <-ch:
+            if err := conn.WriteJSON(notification); err != nil {
+                return
+            }
+        case <-ticker.C:
+            if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+                return
+            }
+        }
+    }
+}
+
+**
+if err := client.SetWriteDeadline(time.Now().Add(writeLimit)); err != nil {
+				log.Error("error set WriteDeadline", slog.Int64("userid", userId), sl.Err(err))
+				return
+			}
+
+func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
+	const OP = "services.use_cases.notify.Subscribe"
+	log := slog.With("OP", OP)
+
+	defer func() {
+		n.RemoveClient(client.UserID)
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is don, exit from subscribe")
+			if err := client.Conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
+				log.Error("Connection is closed", sl.Err(err))
+			}
+			return
+
+		case notification, ok := <-client.Cn:
+			if !ok {
+				if err := client.Conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
+					log.Error("Connection is closed", sl.Err(err))
+				}
+				return
+			}
+
+			log.Info("Send message to client", slog.AnyValue(notification))
+			if err := client.Conn.WriteJSON(notification); err != nil {
+				log.Error("Error send message to client, connection is closed",
+					slog.Int64("userid", client.UserID),
+					sl.Err(err))
+				return
+			}
+		}
+	}
+}
