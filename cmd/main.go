@@ -120,9 +120,7 @@ func run() error {
 		slog.Error("Shutdown failed, forcing close", sl.Err(err))
 		if closeErr := srv.Close(); closeErr != nil {
 			slog.Error("Forcing close failed", sl.Err(closeErr))
-			return errors.Join(err, closeErr)
 		}
-		return err
 	}
 
 	wg.Wait()
