@@ -26,6 +26,7 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 	productController := controller.NewProductController(serviceManager, validate)
 	deliveryController := controller.NewDeliveryController(serviceManager, validate)
 	notifyController := controller.NewNotifyController(serviceManager)
+	metricsController := controller.NewMetricsController(serviceManager)
 
 	router.Route("/api/v1", func(r chi.Router) {
 
@@ -34,8 +35,8 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 			r.Post("/signin", authController.SignIn)
 		})
 
-		r.Route("/ws", func(r chi.Router) {
-			r.Get("/subscribe", notifyController.UpgradeConnection)
+		r.Route("/metrics", func(r chi.Router) {
+			r.Get("/", metricsController.GetAll)
 		})
 
 		r.Group(func(r chi.Router) {
@@ -62,9 +63,9 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 				r.Delete("/{id}", deliveryController.DeleteById)
 			})
 
-			//r.Route("/subscribe", func(r chi.Router) {
-			//	r.Get("/", notifyController.UpgradeConnection)
-			//})
+			r.Route("/ws", func(r chi.Router) {
+				r.Get("/subscribe", notifyController.UpgradeConnection)
+			})
 		})
 	})
 
