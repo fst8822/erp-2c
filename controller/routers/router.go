@@ -2,6 +2,7 @@ package routers
 
 import (
 	"erp-2c/controller"
+	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/security"
 	"erp-2c/service/use_cases"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func New(serviceManager *use_cases.Manager) http.Handler {
@@ -26,19 +28,16 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 	productController := controller.NewProductController(serviceManager, validate)
 	deliveryController := controller.NewDeliveryController(serviceManager, validate)
 	notifyController := controller.NewNotifyController(serviceManager)
-	metricsController := controller.NewMetricsController(serviceManager)
 
+	router.Handle("/metrics", promhttp.Handler())
 	router.Route("/api/v1", func(r chi.Router) {
-
-		r.Route("/auth", func(r chi.Router) {
-			r.Post("/signup", authController.SignUp)
-			r.Post("/signin", authController.SignIn)
+		r.Group(func(r chi.Router) {
+			r.Use(app_metrics.MetricsMiddleware)
+			r.Route("/auth", func(r chi.Router) {
+				r.Post("/signup", authController.SignUp)
+				r.Post("/signin", authController.SignIn)
+			})
 		})
-
-		r.Route("/metrics", func(r chi.Router) {
-			r.Get("/", metricsController.GetAll)
-		})
-
 		r.Group(func(r chi.Router) {
 			r.Use(security.JwtMiddleware)
 
