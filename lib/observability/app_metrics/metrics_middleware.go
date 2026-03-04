@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const websocket = "websocket"
+
 type ResponseWithStatus struct {
 	http.ResponseWriter
 	status int
@@ -30,14 +32,20 @@ func (r *ResponseWithStatus) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 func MetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		resp := &ResponseWithStatus{
-			ResponseWriter: w,
-			status:         http.StatusOK,
+
+		if r.Header.Get("Upgrade") == websocket {
+			HttpReqTotal.WithLabelValues(r.URL.Path, r.Method, "101").Inc()
+			next.ServeHTTP(w, r)
+		} else {
+			start := time.Now()
+			resp := &ResponseWithStatus{
+				ResponseWriter: w,
+				status:         http.StatusOK,
+			}
+			next.ServeHTTP(resp, r)
+			duration := time.Since(start).Seconds()
+			HttpReqTotal.WithLabelValues(r.URL.Path, r.Method, strconv.Itoa(resp.status)).Inc()
+			HttpReqDuration.WithLabelValues(r.URL.Path).Observe(duration)
 		}
-		next.ServeHTTP(resp, r)
-		duration := time.Since(start).Seconds()
-		HttpReqTotal.WithLabelValues(r.URL.Path, r.Method, strconv.Itoa(resp.status)).Inc()
-		HttpReqDuration.WithLabelValues(r.URL.Path).Observe(duration)
 	})
 }

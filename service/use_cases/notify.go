@@ -6,6 +6,7 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/exp/slog"
@@ -29,6 +30,7 @@ func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
 	const OP = "services.use_cases.notify.NotifyService.Subscribe"
 	log := slog.With("OP", OP, "UserID", client.UserID)
 
+	start := time.Now()
 	ctxDone, cancel := context.WithCancel(ctx)
 	go n.checkClientConn(cancel, client)
 
@@ -38,6 +40,7 @@ func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
 		defer func() {
 			n.RemoveClient(client)
 			defer app_metrics.WebsocketActiveConn.Dec()
+			defer app_metrics.WebsocketSessionDuration.Observe(time.Since(start).Seconds())
 		}()
 
 		for {

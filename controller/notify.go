@@ -53,7 +53,7 @@ func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.R
 		return
 	}
 	logger.Info("has new connection", slog.Any("LocalAddr", conn.LocalAddr()))
-	defer app_metrics.WebsocketActiveConn.Inc()
+	app_metrics.WebsocketActiveConn.Inc()
 
 	client := &model.ClientWS{
 		UUID:   uuid.New(),

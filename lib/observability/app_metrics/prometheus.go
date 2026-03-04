@@ -28,6 +28,13 @@ var (
 		},
 		[]string{"path"},
 	)
+	WebsocketSessionDuration = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "websocket_session_duration_seconds",
+			Help:    "How long the websocket connection stayed open",
+			Buckets: []float64{60, 180, 360, 600, 1800, 3600},
+		},
+	)
 	WebsocketActiveConn = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "websocket_active_connection",
