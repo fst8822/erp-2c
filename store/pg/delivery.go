@@ -56,7 +56,7 @@ func (d *DeliveryRepository) SaveWithItems(
 
 func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (model.DeliveryWithItemsDB, error) {
 	var deliveryWithItems model.DeliveryWithItemsDB
-	queryGet := `SELECT * FROM delivery WHERE id = $1`
+	queryGet := `SELECT id,recipient,address,status,created_at,user_id FROM delivery WHERE id = $1`
 	querySelect := `SELECT * FROM delivery_items where delivery_id = $1`
 
 	var err error
@@ -131,9 +131,11 @@ func (d *DeliveryRepository) GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error) {
 
 	var err error
 	if tx == nil {
-		err = d.db.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery")
+		err = d.db.Select(&deliverListDB.DeliveriesDB,
+			"SELECT id,recipient,address,status,created_at,user_id FROM delivery")
 	} else {
-		err = tx.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery")
+		err = tx.Select(&deliverListDB.DeliveriesDB,
+			"SELECT id,recipient,address,status,created_at,user_id FROM delivery")
 	}
 	if err != nil {
 		return nil, types.NewAppErr("inspected SQL error, failed to get deliveries",
@@ -157,9 +159,11 @@ func (d *DeliveryRepository) GetAllWithItemsByStatus(tx *sqlx.Tx, status model.D
 
 	var err error
 	if tx == nil {
-		err = d.db.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery d where d.status = $1", status)
+		err = d.db.Select(&deliverListDB.DeliveriesDB,
+			"SELECT id,recipient,address,status,created_at,user_id FROM delivery d where d.status = $1", status)
 	} else {
-		err = tx.Select(&deliverListDB.DeliveriesDB, "SELECT * FROM delivery d where d.status = $1", status)
+		err = tx.Select(&deliverListDB.DeliveriesDB,
+			"SELECT id,recipient,address,status,created_at,user_id FROM delivery d where d.status = $1", status)
 	}
 	if err != nil {
 		return nil, types.NewAppErr("inspected SQL error, failed to get deliveries by status",
