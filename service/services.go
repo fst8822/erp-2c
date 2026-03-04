@@ -41,7 +41,3 @@ type NotifyService interface {
 	RemoveClient(client *model.ClientWS)
 	Shutdown()
 }
-
-type MetricsService interface {
-	GetMetrics() model.MetricsDomain
-}
