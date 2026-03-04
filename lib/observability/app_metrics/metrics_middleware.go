@@ -1,6 +1,9 @@
 package app_metrics
 
 import (
+	"bufio"
+	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,18 +14,24 @@ type ResponseWithStatus struct {
 	status int
 }
 
-func (r ResponseWithStatus) WriteHeader(statusCode int) {
+func (r *ResponseWithStatus) WriteHeader(statusCode int) {
 	r.status = statusCode
 	r.ResponseWriter.WriteHeader(statusCode)
 }
-func (r ResponseWithStatus) Write(b []byte) (int, error) {
+func (r *ResponseWithStatus) Write(b []byte) (int, error) {
 	return r.ResponseWriter.Write(b)
+}
+func (r *ResponseWithStatus) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hj, ok := r.ResponseWriter.(http.Hijacker); ok {
+		return hj.Hijack()
+	}
+	return nil, nil, fmt.Errorf("upstream ResponseWriter does not support hijacking")
 }
 
 func MetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		resp := ResponseWithStatus{
+		resp := &ResponseWithStatus{
 			ResponseWriter: w,
 			status:         http.StatusOK,
 		}

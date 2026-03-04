@@ -39,6 +39,7 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 			})
 		})
 		r.Group(func(r chi.Router) {
+			r.Use(app_metrics.MetricsMiddleware)
 			r.Use(security.JwtMiddleware)
 
 			r.Route("/user", func(r chi.Router) {

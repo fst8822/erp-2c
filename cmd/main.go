@@ -53,7 +53,7 @@ func loadENV() {
 func run() error {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
-	done := make(chan struct{})
+
 	loadENV()
 	cfg := config.Get()
 
@@ -69,11 +69,12 @@ func run() error {
 
 	storeRepo := store.NewStore(db.Pg)
 	mapCache := cache.NewMapCache(tTLCache)
-	repositoryCache := cache.NewRepositoryCache(ctx, storeRepo, mapCache, done)
+	repositoryCache := cache.NewRepositoryCache(ctx, storeRepo, mapCache)
 	serviceManager, err := use_cases.NewManager(storeRepo, repositoryCache)
 	if err != nil {
 		return err
 	}
+
 	go app_metrics.StartMetricsSync(ctx, storeRepo)
 	queue := collection.NewQueue(capacity)
 	workPoll := workers.NewWorkerPool(
@@ -91,7 +92,6 @@ func run() error {
 	}()
 
 	r := routers.New(serviceManager)
-
 	srv := &http.Server{
 		Addr:         cfg.HTTPAddress,
 		Handler:      r,
@@ -124,8 +124,8 @@ func run() error {
 
 	slog.Info("Starting graceful shutdown")
 	ctxCancel()
-	done <- struct{}{}
 
+	slog.Info("Send signal done graceful is successful")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 

@@ -6,13 +6,10 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/exp/slog"
 )
-
-const PingInterval = 10 * time.Second
 
 type NotifyService struct {
 	mu      sync.RWMutex
@@ -32,12 +29,15 @@ func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
 	const OP = "services.use_cases.notify.NotifyService.Subscribe"
 	log := slog.With("OP", OP, "UserID", client.UserID)
 
+	ctxDone, cancel := context.WithCancel(ctx)
+	go n.checkClientConn(cancel, client)
+
 	n.wg.Add(1)
 	go func() {
 		defer n.wg.Done()
 		defer func() {
 			n.RemoveClient(client)
-			defer app_metrics.WebsocketActiveConn.Inc()
+			defer app_metrics.WebsocketActiveConn.Dec()
 		}()
 
 		for {
@@ -65,11 +65,13 @@ func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
 					return
 				}
 				slog.Info("Send message successful", slog.Any("notification", notification))
+
+			case <-ctxDone.Done():
+				log.Error("client connection is last, exit from subscribe")
+				return
 			}
-			log.Info("End WS worker")
 		}
 	}()
-
 }
 
 func (n *NotifyService) SendNotify(notification model.Notification) {
@@ -125,4 +127,12 @@ func (n *NotifyService) Shutdown() {
 	close(n.done)
 	n.wg.Wait()
 	log.Info("Shutdown client ws is done")
+}
+
+func (n *NotifyService) checkClientConn(cancel context.CancelFunc, client *model.ClientWS) {
+	_, _, err := client.Conn.ReadMessage()
+	defer cancel()
+	if err != nil {
+		return
+	}
 }
