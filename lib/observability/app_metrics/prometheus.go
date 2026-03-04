@@ -59,7 +59,7 @@ func StartMetricsSync(ctx context.Context, repo *store.Store) {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("Context is done, turn of method StartMetricsSync")
+			logger.Info("Context is done, stopped method StartMetricsSync")
 			return
 		case <-ticket.C:
 			res, err := repo.Delivery.GetStatusCount(nil)

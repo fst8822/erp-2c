@@ -719,3 +719,58 @@ func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
 		}
 	}
 }
+
+docker run -d --name prometheus -p 9090:9090 prom/prometheus:latest
+docker ps -a | grep prometheus
+
+
+go get github.com/prometheus/client_golang/prometheus
+go get github.com/prometheus/client_golang/prometheus/promhttp
+github.com/prometheus/client_golang/prometheus/promauto
+router.Handle("/metrics", promhttp.Handler())
+r.Handle("/metrics", promhttp.Handler())
+var (
+    // Счётчик регистраций
+    userRegistrations = promauto.NewCounter(prometheus.CounterOpts{
+        Name: "app_user_registrations_total",
+        Help: "Общее количество новых пользователей",
+    })
+
+    // Датчик активных соединений с БД
+    dbConnections = promauto.NewGauge(prometheus.GaugeOpts{
+        Name: "app_db_connections_active",
+        Help: "Текущее кол-во соединений с базой",
+    })
+)
+Обычно в Prometheus работа с метрикой состоит из двух шагов: Создание объекта метрики.
+Регистрация его в системе (prometheus.MustRegister), чтобы библиотека знала,
+что эту метрику нужно показывать в /metrics.
+Пакет promauto делает эти два шага одновременно.
+
+app_orders_created_total — просто число всех заказов за всё время.
+rate(app_orders_created_total[5m]) — скорость заказов. Покажет, сколько заказов в
+секунду падает прямо сейчас (усредненно за 5 минут). Это самый важный график для бизнеса.
+sum(app_orders_by_category_total) by (category) — покажет, какая категория самая популярная.
+
+func init() {
+	err := prometheus.Register(collectors.NewGoCollector())
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: GoCollector", sl.Err(err))
+	}
+	err = prometheus.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: ProcessCollector", sl.Err(err))
+	}
+	err = prometheus.Register(HttpReqTotal)
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: httpReqTotal", sl.Err(err))
+	}
+	err = prometheus.Register(HttpReqDuration)
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: httpReqDuration", sl.Err(err))
+	}
+	err = prometheus.Register(WebsocketActiveConn)
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: WebsocketActiveConn", sl.Err(err))
+	}
+}

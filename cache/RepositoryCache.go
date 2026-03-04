@@ -11,17 +11,15 @@ import (
 type RepositoryCache struct {
 	store    store.Store
 	mapCache Cache
-	done     chan struct{}
 }
 
 func NewRepositoryCache(
 	ctx context.Context,
 	store *store.Store,
 	mapCache Cache,
-	done chan struct{}) *RepositoryCache {
-	repo := RepositoryCache{store: *store, mapCache: mapCache, done: done}
-
-	go mapCache.cleanTTL(ctx, repo.done)
+) *RepositoryCache {
+	repo := RepositoryCache{store: *store, mapCache: mapCache}
+	go mapCache.cleanTTL(ctx)
 	return &repo
 }
 

@@ -12,7 +12,7 @@ type Cache interface {
 	Get(id int64) (any, bool)
 	GetAll() ([]any, bool)
 	Add(delivery model.DeliveryWithItemsDB)
-	cleanTTL(ctx context.Context, done chan struct{})
+	cleanTTL(ctx context.Context)
 }
 
 type itemCache struct {
@@ -52,7 +52,7 @@ func (c *MapCache) Add(deliveryWithItems model.DeliveryWithItemsDB) {
 	})
 }
 
-func (c *MapCache) cleanTTL(ctx context.Context, done chan struct{}) {
+func (c *MapCache) cleanTTL(ctx context.Context) {
 	const op = "cache.cleanTTL"
 	logger := slog.With("op", op)
 
@@ -62,9 +62,6 @@ func (c *MapCache) cleanTTL(ctx context.Context, done chan struct{}) {
 	select {
 	case <-ctx.Done():
 		logger.Info("Stop clear ttl, context is done")
-		return
-	case <-done:
-		logger.Info("Stop clear ttl, receive signal done")
 		return
 	case <-ticket.C:
 		logger.Info("Start clear ttl")
