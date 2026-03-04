@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"erp-2c/cache"
 	"erp-2c/config"
 	"erp-2c/controller/routers"
 	"erp-2c/lib/collection"
+	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/lib/sl"
 	"erp-2c/lib/workers"
 	"erp-2c/service/use_cases"
@@ -19,8 +21,16 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
+)
+
+const (
+	capacity     = 10
+	countWorkers = 5
+	cron         = 5
+	tTLCache     = time.Minute
 )
 
 func main() {
@@ -43,8 +53,8 @@ func loadENV() {
 func run() error {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
+	done := make(chan struct{})
 	loadENV()
-
 	cfg := config.Get()
 
 	db, err := pg.Dial()
@@ -58,18 +68,20 @@ func run() error {
 	}
 
 	storeRepo := store.NewStore(db.Pg)
-	serviceManager, err := use_cases.NewManager(storeRepo)
+	mapCache := cache.NewMapCache(tTLCache)
+	repositoryCache := cache.NewRepositoryCache(ctx, storeRepo, mapCache, done)
+	serviceManager, err := use_cases.NewManager(storeRepo, repositoryCache)
 	if err != nil {
 		return err
 	}
-
-	queue := collection.NewQueue(10)
+	go app_metrics.StartMetricsSync(ctx, storeRepo)
+	queue := collection.NewQueue(capacity)
 	workPoll := workers.NewWorkerPool(
 		serviceManager.NotifyService,
 		storeRepo.Delivery,
 		queue,
-		5,
-		5)
+		countWorkers,
+		cron)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -112,6 +124,7 @@ func run() error {
 
 	slog.Info("Starting graceful shutdown")
 	ctxCancel()
+	done <- struct{}{}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
