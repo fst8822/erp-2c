@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type StatusCount struct {
+	Status string `db:"status"`
+	Count  int    `db:"count"`
+}
+
 type DeliveryStatus string
 
 func (s DeliveryStatus) IsValid() error {

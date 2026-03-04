@@ -54,7 +54,7 @@ func (d *DeliveryRepository) SaveWithItems(
 	return &deliveryWithItems.DeliveryDB, nil
 }
 
-func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*model.DeliveryWithItemsDB, error) {
+func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (model.DeliveryWithItemsDB, error) {
 	var deliveryWithItems model.DeliveryWithItemsDB
 	queryGet := `SELECT * FROM delivery WHERE id = $1`
 	querySelect := `SELECT * FROM delivery_items where delivery_id = $1`
@@ -68,9 +68,9 @@ func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*m
 	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, types.NewAppErr("delivery not found", types.ErrNotFound)
+			return model.DeliveryWithItemsDB{}, types.NewAppErr("delivery not found", types.ErrNotFound)
 		}
-		return nil, types.NewAppErr(" inspected SQL error, failed to get delivery by id",
+		return model.DeliveryWithItemsDB{}, types.NewAppErr(" inspected SQL error, failed to get delivery by id",
 			errors.Join(err, types.ErrInspectedSQL))
 	}
 
@@ -87,10 +87,10 @@ func (d *DeliveryRepository) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (*m
 	}
 
 	if err != nil {
-		return nil, types.NewAppErr(" inspected SQL error, failed to get item",
+		return model.DeliveryWithItemsDB{}, types.NewAppErr(" inspected SQL error, failed to get item",
 			errors.Join(err, types.ErrInspectedSQL))
 	}
-	return &deliveryWithItems, nil
+	return deliveryWithItems, nil
 }
 
 func (d *DeliveryRepository) LockAndGetDeliveries(status model.DeliveryStatus) ([]model.DeliveryDB, error) {
@@ -246,4 +246,20 @@ func (d *DeliveryRepository) UpdateStatusByIds(tx *sqlx.Tx, groups map[model.Del
 			errors.Join(err, types.ErrInspectedSQL))
 	}
 	return nil
+}
+
+func (d *DeliveryRepository) GetStatusCount(tx *sqlx.Tx) ([]model.StatusCount, error) {
+	var statusCount []model.StatusCount
+
+	var err error
+	if tx == nil {
+		err = d.db.Select(&statusCount, "SELECT status, count(*) as count FROM delivery group by status")
+	} else {
+		err = tx.Select(&statusCount, "SELECT status, count(*) as count FROM delivery group by status")
+	}
+	if err != nil {
+		return []model.StatusCount{}, types.NewAppErr("inspected SQL error, failed to get delivery",
+			errors.Join(err, types.ErrNotFound))
+	}
+	return statusCount, nil
 }

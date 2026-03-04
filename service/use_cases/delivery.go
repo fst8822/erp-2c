@@ -3,6 +3,8 @@ package use_cases
 import (
 	"context"
 	"database/sql"
+	"erp-2c/cache"
+	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/lib/sl"
 	"erp-2c/lib/types"
 	"erp-2c/model"
@@ -14,11 +16,12 @@ import (
 )
 
 type DeliveryService struct {
-	repo *store.Store
+	repo      *store.Store
+	cacheRepo *cache.RepositoryCache
 }
 
-func NewDeliveryService(repo *store.Store) *DeliveryService {
-	return &DeliveryService{repo: repo}
+func NewDeliveryService(repo *store.Store, cacheRepo *cache.RepositoryCache) *DeliveryService {
+	return &DeliveryService{repo: repo, cacheRepo: cacheRepo}
 }
 
 func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error) {
@@ -71,7 +74,9 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 		sLogger.Error("failed save delivery", sl.Err(err))
 		return nil, err
 	}
+	app_metrics.TotalCountDelivery.Inc()
 	slog.Info("Saved delivery", slog.Int64("deliveryId", saved.ID))
+	d.cacheRepo.Add(deliveryWithItemsDB)
 
 	if err := tx.Commit(); err != nil {
 		slog.Error("failed commit tx", sl.Err(err))
@@ -105,7 +110,7 @@ func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryItemsDomain,
 		}
 	}()
 
-	deliveryItemsDB, err := d.repo.Delivery.GetWithItemsById(tx, deliveryId)
+	deliveryItemsDB, err := d.cacheRepo.GetById(context.TODO(), tx, deliveryId)
 	if err != nil {
 		sLogger.Error("failed to find delivery", sl.Err(err))
 		return nil, err
@@ -144,7 +149,7 @@ func (d *DeliveryService) GetAll() (*model.DeliveryItemListDomain, error) {
 		}
 	}()
 
-	deliveryListDB, err := d.repo.Delivery.GetAll(tx)
+	deliveryListDB, err := d.cacheRepo.GetAll(context.TODO(), tx)
 	if err != nil {
 		sLogger.Error("failed to find deliveries", sl.Err(err))
 		return nil, err
