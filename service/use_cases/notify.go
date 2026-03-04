@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"context"
+	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"sync"
@@ -36,6 +37,7 @@ func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
 		defer n.wg.Done()
 		defer func() {
 			n.RemoveClient(client)
+			defer app_metrics.WebsocketActiveConn.Inc()
 		}()
 
 		for {
@@ -95,13 +97,13 @@ func (n *NotifyService) SendNotify(notification model.Notification) {
 func (n *NotifyService) AddClient(client *model.ClientWS) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+
 	if old, exist := n.clients[client.UserID]; exist {
 		old.Conn.Close()
 		close(old.Cn)
 		delete(n.clients, old.UserID)
 	}
 	n.clients[client.UserID] = client
-
 }
 
 func (n *NotifyService) RemoveClient(client *model.ClientWS) {

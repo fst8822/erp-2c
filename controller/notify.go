@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/lib/response"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
@@ -52,6 +53,7 @@ func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.R
 		return
 	}
 	logger.Info("has new connection", slog.Any("LocalAddr", conn.LocalAddr()))
+	defer app_metrics.WebsocketActiveConn.Inc()
 
 	client := &model.ClientWS{
 		UUID:   uuid.New(),
