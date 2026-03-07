@@ -68,12 +68,14 @@ func run() error {
 	}
 
 	productRepository := pg.NewProductRepository(db.Pg)
+	userRepository := pg.NewUserRepository(db.Pg)
 
 	storeRepo := store.NewStore(db.Pg)
 	mapCache := cache.NewMapCache(tTLCache)
 	repositoryCache := cache.NewRepositoryCache(ctx, storeRepo, mapCache)
 
 	serviceManager, err := use_cases.NewManager(
+		userRepository,
 		productRepository,
 		storeRepo, repositoryCache,
 	)

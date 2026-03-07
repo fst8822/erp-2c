@@ -16,6 +16,7 @@ type Manager struct {
 }
 
 func NewManager(
+	userRepo userRepositoryInt,
 	productRepo productRepoInt,
 	storeRepo *store.Store,
 	cacheRepo *cache.RepositoryCache,
@@ -24,7 +25,7 @@ func NewManager(
 		return nil, fmt.Errorf("no store provided")
 	}
 
-	userService := NewUserService(storeRepo)
+	userService := NewUserService(userRepo)
 	productService := NewProductService(productRepo)
 	authService := NewAuthService(storeRepo, userService)
 	deliveryService := NewDeliveryService(storeRepo, productRepo, cacheRepo)

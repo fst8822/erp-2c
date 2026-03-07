@@ -17,11 +17,11 @@ import (
 //	GetByGroupName(groupId string) ([]model.ProductDB, error)
 //}
 
-type UserRepository interface {
-	Save(userToSave model.UserDB) (*model.UserDB, error)
-	GetById(userId int64) (*model.UserDB, error)
-	GetByLogin(userId string) (*model.UserDB, error)
-}
+//type UserRepository interface {
+//	Save(userToSave model.UserDB) (*model.UserDB, error)
+//	GetById(userId int64) (*model.UserDB, error)
+//	GetByLogin(userId string) (*model.UserDB, error)
+//}
 
 type DeliveryRepository interface {
 	SaveWithItems(tx *sqlx.Tx, deliveryWithItems model.DeliveryWithItemsDB) (*model.DeliveryDB, error)
