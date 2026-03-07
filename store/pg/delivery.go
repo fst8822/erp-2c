@@ -267,3 +267,14 @@ func (d *DeliveryRepository) GetStatusCount(tx *sqlx.Tx) ([]model.StatusCount, e
 	}
 	return statusCount, nil
 }
+
+func (d *DeliveryRepository) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+	tx, err := d.db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	return tx, nil
+}

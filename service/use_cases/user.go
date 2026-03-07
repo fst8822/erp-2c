@@ -1,15 +1,19 @@
 package use_cases
 
 import (
+	"context"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"log/slog"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type userRepositoryInt interface {
 	Save(userToSave model.UserDB) (*model.UserDB, error)
 	GetById(userId int64) (*model.UserDB, error)
 	GetByLogin(userId string) (*model.UserDB, error)
+	BeginTxx(ctx context.Context) (*sqlx.Tx, error)
 }
 
 type UserService struct {

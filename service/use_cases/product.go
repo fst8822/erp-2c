@@ -1,6 +1,7 @@
 package use_cases
 
 import (
+	"context"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"log/slog"
@@ -17,6 +18,7 @@ type productRepoInt interface {
 	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
 	DeleteById(productId int64) error
 	GetByGroupName(groupId string) ([]model.ProductDB, error)
+	BeginTxx(ctx context.Context) (*sqlx.Tx, error)
 }
 
 type ProductService struct {

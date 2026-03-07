@@ -3,8 +3,7 @@ package use_cases
 import (
 	"erp-2c/cache"
 	"erp-2c/service"
-	"erp-2c/store"
-	"fmt"
+	"erp-2c/store/pg"
 )
 
 type Manager struct {
@@ -18,17 +17,13 @@ type Manager struct {
 func NewManager(
 	userRepo userRepositoryInt,
 	productRepo productRepoInt,
-	storeRepo *store.Store,
-	cacheRepo *cache.RepositoryCache,
-) (*Manager, error) {
-	if storeRepo == nil {
-		return nil, fmt.Errorf("no store provided")
-	}
+	deliveryRepo *pg.DeliveryRepository,
+	cacheRepo *cache.RepositoryCache) (*Manager, error) {
 
 	userService := NewUserService(userRepo)
 	productService := NewProductService(productRepo)
-	authService := NewAuthService(storeRepo, userService)
-	deliveryService := NewDeliveryService(storeRepo, productRepo, cacheRepo)
+	authService := NewAuthService(userService)
+	deliveryService := NewDeliveryService(deliveryRepo, productRepo, cacheRepo)
 	notifyService := NewNotifyService()
 
 	return &Manager{

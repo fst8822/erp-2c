@@ -3,22 +3,26 @@ package cache
 import (
 	"context"
 	"erp-2c/model"
-	"erp-2c/store"
 
 	"github.com/jmoiron/sqlx"
 )
 
+type deliveryRepositoryInt interface {
+	GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (model.DeliveryWithItemsDB, error)
+	GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error)
+}
+
 type RepositoryCache struct {
-	store    store.Store
-	mapCache Cache
+	deliveryRepo deliveryRepositoryInt
+	mapCache     Cache
 }
 
 func NewRepositoryCache(
 	ctx context.Context,
-	store *store.Store,
+	deliveryRepo deliveryRepositoryInt,
 	mapCache Cache,
 ) *RepositoryCache {
-	repo := RepositoryCache{store: *store, mapCache: mapCache}
+	repo := RepositoryCache{deliveryRepo: deliveryRepo, mapCache: mapCache}
 	go mapCache.cleanTTL(ctx)
 	return &repo
 }
@@ -43,7 +47,7 @@ func (c *RepositoryCache) GetAll(ctx context.Context, tx *sqlx.Tx) (*model.Deliv
 		}, nil
 	}
 
-	deliverListDB, err := c.store.Delivery.GetAll(tx)
+	deliverListDB, err := c.deliveryRepo.GetAll(tx)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +64,7 @@ func (c *RepositoryCache) GetById(ctx context.Context, tx *sqlx.Tx, id int64) (m
 			}
 		}
 	}
-	deliveryWithItemsDB, err := c.store.Delivery.GetWithItemsById(tx, id)
+	deliveryWithItemsDB, err := c.deliveryRepo.GetWithItemsById(tx, id)
 	if err != nil {
 		return model.DeliveryWithItemsDB{}, err
 	}

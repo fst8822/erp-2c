@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"erp-2c/lib/sl"
-	"erp-2c/store/pg"
 	"fmt"
 	"log/slog"
 
@@ -12,22 +11,19 @@ import (
 )
 
 type Store struct {
-	db       *sqlx.DB
-	Delivery DeliveryRepository
+	Db *sqlx.DB
 }
 
 func NewStore(db *sqlx.DB) *Store {
-
 	return &Store{
-		Delivery: pg.NewDeliveryRepository(db),
-		db:       db,
+		Db: db,
 	}
 }
 
 func (s *Store) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
 	const op = "store.store.BeginTxx"
 
-	tx, err := s.db.BeginTxx(ctx, &sql.TxOptions{
+	tx, err := s.Db.BeginTxx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelReadCommitted,
 		ReadOnly:  false,
 	})

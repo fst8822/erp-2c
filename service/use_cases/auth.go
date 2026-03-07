@@ -6,7 +6,6 @@ import (
 	"erp-2c/model"
 	"erp-2c/security"
 	"erp-2c/service"
-	"erp-2c/store"
 	"fmt"
 	"log/slog"
 
@@ -14,13 +13,11 @@ import (
 )
 
 type AuthService struct {
-	store       *store.Store
 	userService service.UserService
 }
 
-func NewAuthService(store *store.Store, userService service.UserService) *AuthService {
+func NewAuthService(userService service.UserService) *AuthService {
 	return &AuthService{
-		store:       store,
 		userService: userService,
 	}
 }

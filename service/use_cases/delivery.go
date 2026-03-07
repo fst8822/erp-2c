@@ -8,27 +8,41 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/lib/types"
 	"erp-2c/model"
-	"erp-2c/store"
 	"errors"
 	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	"golang.org/x/exp/slog"
 )
 
+type deliveryRepositoryInt interface {
+	SaveWithItems(tx *sqlx.Tx, deliveryWithItems model.DeliveryWithItemsDB) (*model.DeliveryDB, error)
+	GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (model.DeliveryWithItemsDB, error)
+	GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error)
+	GetAllWithItemsByStatus(tx *sqlx.Tx, status model.DeliveryStatus) (*model.DeliverListDB, error)
+	LockAndGetDeliveries(status model.DeliveryStatus) ([]model.DeliveryDB, error)
+	UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error
+	DeleteById(tx *sqlx.Tx, deliveryId int64) error
+	UpdateStatusById(tx *sqlx.Tx, id int64, status model.DeliveryStatus) error
+	UpdateStatusByIds(tx *sqlx.Tx, groups map[model.DeliveryStatus][]int64) error
+	GetStatusCount(tx *sqlx.Tx) ([]model.StatusCount, error)
+	BeginTxx(ctx context.Context) (*sqlx.Tx, error)
+}
+
 type DeliveryService struct {
-	repo        *store.Store
-	cacheRepo   *cache.RepositoryCache
-	productRepo productRepoInt
+	deliveryRepo deliveryRepositoryInt
+	cacheRepo    *cache.RepositoryCache
+	productRepo  productRepoInt
 }
 
 func NewDeliveryService(
-	repo *store.Store,
+	deliveryRepo deliveryRepositoryInt,
 	productRepo productRepoInt,
 	cacheRepo *cache.RepositoryCache) *DeliveryService {
 	return &DeliveryService{
-		repo:        repo,
-		productRepo: productRepo,
-		cacheRepo:   cacheRepo}
+		deliveryRepo: deliveryRepo,
+		productRepo:  productRepo,
+		cacheRepo:    cacheRepo}
 }
 
 func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error) {
@@ -36,7 +50,7 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 	sLogger := slog.With("op", op)
 	sLogger.Info("Begin save delivery.", slog.Any("delivery", delivery))
 
-	tx, err := d.repo.BeginTxx(context.Background())
+	tx, err := d.deliveryRepo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
@@ -76,7 +90,7 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 	}
 
 	deliveryWithItemsDB := delivery.MapToDBWithItems()
-	saved, err := d.repo.Delivery.SaveWithItems(tx, deliveryWithItemsDB)
+	saved, err := d.deliveryRepo.SaveWithItems(tx, deliveryWithItemsDB)
 	if err != nil {
 		sLogger.Error("failed save delivery", sl.Err(err))
 		return nil, err
@@ -99,7 +113,7 @@ func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryItemsDomain,
 	const op = "service.use_cases.delivery.GetWithItemsById"
 	sLogger := slog.With("op", op, "deliveryId", deliveryId)
 
-	tx, err := d.repo.BeginTxx(context.Background())
+	tx, err := d.deliveryRepo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
@@ -138,7 +152,7 @@ func (d *DeliveryService) GetAll() (*model.DeliveryItemListDomain, error) {
 	const op = "control.delivery.GetAll"
 	sLogger := slog.With("op", op)
 
-	tx, err := d.repo.BeginTxx(context.Background())
+	tx, err := d.deliveryRepo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
@@ -182,7 +196,7 @@ func (d *DeliveryService) GetByStatus(status model.DeliveryStatus) (*model.Deliv
 	const op = "service.use_cases.delivery.LockAndGetDeliveries"
 	sLogger := slog.With("op", op, "status", status)
 
-	tx, err := d.repo.BeginTxx(context.Background())
+	tx, err := d.deliveryRepo.BeginTxx(context.Background())
 	if err != nil {
 		sLogger.Error("failed get tx", sl.Err(err))
 		return nil, err
@@ -200,7 +214,7 @@ func (d *DeliveryService) GetByStatus(status model.DeliveryStatus) (*model.Deliv
 		}
 	}()
 
-	deliveryListDB, err := d.repo.Delivery.GetAllWithItemsByStatus(tx, status)
+	deliveryListDB, err := d.deliveryRepo.GetAllWithItemsByStatus(tx, status)
 	if err != nil {
 		sLogger.Error("failed to find delivery", sl.Err(err))
 		return nil, err

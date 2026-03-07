@@ -69,25 +69,27 @@ func run() error {
 
 	productRepository := pg.NewProductRepository(db.Pg)
 	userRepository := pg.NewUserRepository(db.Pg)
+	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
 
-	storeRepo := store.NewStore(db.Pg)
 	mapCache := cache.NewMapCache(tTLCache)
-	repositoryCache := cache.NewRepositoryCache(ctx, storeRepo, mapCache)
+	repositoryCache := cache.NewRepositoryCache(ctx, deliveryRepository, mapCache)
 
 	serviceManager, err := use_cases.NewManager(
 		userRepository,
 		productRepository,
-		storeRepo, repositoryCache,
+		deliveryRepository,
+		repositoryCache,
 	)
 	if err != nil {
 		return err
 	}
 
-	go app_metrics.StartMetricsSync(ctx, storeRepo)
+	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
+
 	queue := collection.NewQueue(capacity)
 	workPoll := workers.NewWorkerPool(
 		serviceManager.NotifyService,
-		storeRepo.Delivery,
+		deliveryRepository,
 		queue,
 		countWorkers,
 		cron)
