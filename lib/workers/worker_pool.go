@@ -5,7 +5,6 @@ import (
 	"erp-2c/lib/collection"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
-	"erp-2c/service"
 	"log/slog"
 	"sync"
 	"time"
@@ -18,13 +17,17 @@ type deliveryRepositoryInt interface {
 	UpdateStatusByIds(tx *sqlx.Tx, groups map[model.DeliveryStatus][]int64) error
 }
 
+type NotifyServiceInt interface {
+	SendNotify(notification model.Notification)
+}
+
 const bachSize = 4
 
 type Worker interface {
 	Run(ctx context.Context)
 }
 type WorkerPool struct {
-	notify       service.NotifyService
+	notify       NotifyServiceInt
 	deliveryRepo deliveryRepositoryInt
 	queue        *collection.Queue
 	wg           *sync.WaitGroup
@@ -33,7 +36,7 @@ type WorkerPool struct {
 }
 
 func NewWorkerPool(
-	notify service.NotifyService,
+	notify NotifyServiceInt,
 	delivery deliveryRepositoryInt,
 	queue *collection.Queue,
 	countWorkers int,
