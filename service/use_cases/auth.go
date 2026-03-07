@@ -5,18 +5,22 @@ import (
 	"erp-2c/lib/types"
 	"erp-2c/model"
 	"erp-2c/security"
-	"erp-2c/service"
 	"fmt"
 	"log/slog"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService struct {
-	userService service.UserService
+type UserServiceInt interface {
+	Save(userToSave model.SignUp) (*model.UserDomain, error)
+	GetByLogin(userId string) (*model.UserDomain, error)
 }
 
-func NewAuthService(userService service.UserService) *AuthService {
+type AuthService struct {
+	userService UserServiceInt
+}
+
+func NewAuthService(userService UserServiceInt) *AuthService {
 	return &AuthService{
 		userService: userService,
 	}
