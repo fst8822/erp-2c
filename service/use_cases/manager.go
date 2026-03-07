@@ -15,15 +15,19 @@ type Manager struct {
 	NotifyService   service.NotifyService
 }
 
-func NewManager(storeRepo *store.Store, cacheRepo *cache.RepositoryCache) (*Manager, error) {
+func NewManager(
+	productRepo productRepoInt,
+	storeRepo *store.Store,
+	cacheRepo *cache.RepositoryCache,
+) (*Manager, error) {
 	if storeRepo == nil {
 		return nil, fmt.Errorf("no store provided")
 	}
 
 	userService := NewUserService(storeRepo)
-	productService := NewProductService(storeRepo)
+	productService := NewProductService(productRepo)
 	authService := NewAuthService(storeRepo, userService)
-	deliveryService := NewDeliveryService(storeRepo, cacheRepo)
+	deliveryService := NewDeliveryService(storeRepo, productRepo, cacheRepo)
 	notifyService := NewNotifyService()
 
 	return &Manager{

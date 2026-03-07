@@ -12,19 +12,17 @@ import (
 )
 
 type Store struct {
-	db          *sqlx.DB
-	UserRepo    UserRepository
-	ProductRepo ProductRepository
-	Delivery    DeliveryRepository
+	db       *sqlx.DB
+	UserRepo UserRepository
+	Delivery DeliveryRepository
 }
 
 func NewStore(db *sqlx.DB) *Store {
 
 	return &Store{
-		UserRepo:    pg.NewUserRepository(db),
-		ProductRepo: pg.NewProductRepository(db),
-		Delivery:    pg.NewDeliveryRepository(db),
-		db:          db,
+		UserRepo: pg.NewUserRepository(db),
+		Delivery: pg.NewDeliveryRepository(db),
+		db:       db,
 	}
 }
 

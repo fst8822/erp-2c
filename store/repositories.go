@@ -6,16 +6,16 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type ProductRepository interface {
-	Save(productToSave model.ProductDB) (*model.ProductDB, error)
-	GetById(productId int64) (*model.ProductDB, error)
-	GetExistIds(tx *sqlx.Tx, productIds []int64) ([]int64, error)
-	GetByName(productName string) (*model.ProductDB, error)
-	GetAll() ([]model.ProductDB, error)
-	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
-	DeleteById(productId int64) error
-	GetByGroupName(groupId string) ([]model.ProductDB, error)
-}
+//type ProductRepository interface {
+//	Save(productToSave model.ProductDB) (*model.ProductDB, error)
+//	GetById(productId int64) (*model.ProductDB, error)
+//	GetExistIds(tx *sqlx.Tx, productIds []int64) ([]int64, error)
+//	GetByName(productName string) (*model.ProductDB, error)
+//	GetAll() ([]model.ProductDB, error)
+//	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
+//	DeleteById(productId int64) error
+//	GetByGroupName(groupId string) ([]model.ProductDB, error)
+//}
 
 type UserRepository interface {
 	Save(userToSave model.UserDB) (*model.UserDB, error)

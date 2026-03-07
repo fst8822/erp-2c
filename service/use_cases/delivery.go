@@ -16,12 +16,19 @@ import (
 )
 
 type DeliveryService struct {
-	repo      *store.Store
-	cacheRepo *cache.RepositoryCache
+	repo        *store.Store
+	cacheRepo   *cache.RepositoryCache
+	productRepo productRepoInt
 }
 
-func NewDeliveryService(repo *store.Store, cacheRepo *cache.RepositoryCache) *DeliveryService {
-	return &DeliveryService{repo: repo, cacheRepo: cacheRepo}
+func NewDeliveryService(
+	repo *store.Store,
+	productRepo productRepoInt,
+	cacheRepo *cache.RepositoryCache) *DeliveryService {
+	return &DeliveryService{
+		repo:        repo,
+		productRepo: productRepo,
+		cacheRepo:   cacheRepo}
 }
 
 func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error) {
@@ -52,7 +59,7 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 		idsToCheck = append(idsToCheck, item.ProductID)
 	}
 
-	foundIds, err := d.repo.ProductRepo.GetExistIds(tx, idsToCheck)
+	foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck)
 	if err != nil {
 		sLogger.Error("failed check existing products", sl.Err(err))
 		return nil, err

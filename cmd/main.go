@@ -67,10 +67,16 @@ func run() error {
 		return err
 	}
 
+	productRepository := pg.NewProductRepository(db.Pg)
+
 	storeRepo := store.NewStore(db.Pg)
 	mapCache := cache.NewMapCache(tTLCache)
 	repositoryCache := cache.NewRepositoryCache(ctx, storeRepo, mapCache)
-	serviceManager, err := use_cases.NewManager(storeRepo, repositoryCache)
+
+	serviceManager, err := use_cases.NewManager(
+		productRepository,
+		storeRepo, repositoryCache,
+	)
 	if err != nil {
 		return err
 	}
