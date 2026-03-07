@@ -23,11 +23,11 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 
 	validate := validator.New()
 
-	authController := controller.NewAuthController(serviceManager, validate)
-	userController := controller.NewUserController(serviceManager, validate)
-	productController := controller.NewProductController(serviceManager, validate)
-	deliveryController := controller.NewDeliveryController(serviceManager, validate)
-	notifyController := controller.NewNotifyController(serviceManager)
+	authController := controller.NewAuthController(serviceManager.AuthService, validate)
+	userController := controller.NewUserController(serviceManager.UserService, validate)
+	productController := controller.NewProductController(serviceManager.ProductService, validate)
+	deliveryController := controller.NewDeliveryController(serviceManager.DeliveryService, validate)
+	notifyController := controller.NewNotifyController(serviceManager.NotifyService)
 
 	router.Handle("/metrics", promhttp.Handler())
 	router.Route("/api/v1", func(r chi.Router) {

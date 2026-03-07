@@ -5,7 +5,6 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/lib/types"
 	"erp-2c/model"
-	"erp-2c/service/use_cases"
 	"net/http"
 	"strconv"
 
@@ -15,14 +14,23 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+type deliveryServiceInt interface {
+	Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error)
+	GetById(deliveryId int64) (*model.DeliveryItemsDomain, error)
+	GetAll() (*model.DeliveryItemListDomain, error)
+	GetByStatus(status model.DeliveryStatus) (*model.DeliveryItemListDomain, error)
+	UpdateById(deliveryId int64, update model.UpdateStatus) error
+	DeleteById(deliveryId int64) error
+}
+
 type DeliveryController struct {
-	services *use_cases.Manager
-	validate *validator.Validate
+	deliveryService deliveryServiceInt
+	validate        *validator.Validate
 }
 
 func NewDeliveryController(
-	services *use_cases.Manager, validate *validator.Validate) *DeliveryController {
-	return &DeliveryController{services: services, validate: validate}
+	deliveryService deliveryServiceInt, validate *validator.Validate) *DeliveryController {
+	return &DeliveryController{deliveryService: deliveryService, validate: validate}
 }
 
 func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +57,7 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	DeliveryItems := requestBody.MapToDomain(userID)
-	saved, err := d.services.DeliveryService.Save(DeliveryItems)
+	saved, err := d.deliveryService.Save(DeliveryItems)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -69,7 +77,7 @@ func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := d.services.DeliveryService.GetById(id)
+	found, err := d.deliveryService.GetById(id)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -78,7 +86,7 @@ func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *DeliveryController) GetAll(w http.ResponseWriter, r *http.Request) {
-	deliveryDomains, err := d.services.DeliveryService.GetAll()
+	deliveryDomains, err := d.deliveryService.GetAll()
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
