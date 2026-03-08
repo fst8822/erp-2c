@@ -2,21 +2,13 @@ package cache
 
 import (
 	"context"
-	"erp-2c/model"
 	"log/slog"
 	"sync"
 	"time"
 )
 
-type Cache interface {
-	Get(id int64) (any, bool)
-	GetAll() ([]any, bool)
-	Add(delivery model.DeliveryWithItemsDB)
-	cleanTTL(ctx context.Context)
-}
-
 type itemCache struct {
-	any
+	value     any
 	ExpiresAt time.Time
 }
 
@@ -25,34 +17,55 @@ type MapCache struct {
 	tTL  time.Duration
 }
 
-func NewMapCache(TTL time.Duration) *MapCache {
-	return &MapCache{tTL: TTL}
+func NewMapCache(tTL time.Duration) MapCache {
+	return MapCache{tTL: tTL}
 }
 
 func (c *MapCache) GetAll() ([]any, bool) {
-	var res []any
+	res := make([]any, 0, 100)
+
 	c.data.Range(func(key any, value any) bool {
-		res = append(res, value)
-		return true
+		if ic, ok := value.(itemCache); ok {
+			res = append(res, ic.value)
+			return true
+		}
+		return false
 	})
 	if len(res) == 0 {
-		return res, true
+		return res, false
 	}
-	return nil, false
+	return res, true
 }
 
-func (c *MapCache) Get(id int64) (any, bool) {
-	return c.data.Load(id)
+func (c *MapCache) Get(key int64) (any, bool) {
+	vAny, ok := c.data.Load(key)
+	var zero any
+	if ok {
+		if ic, ok2 := vAny.(itemCache); ok2 {
+			return ic.value, true
+		}
+	}
+	return zero, false
 }
 
-func (c *MapCache) Add(deliveryWithItems model.DeliveryWithItemsDB) {
-	c.data.Store(deliveryWithItems.DeliveryDB.ID, itemCache{
-		any:       deliveryWithItems,
+func (c *MapCache) DeleteByKey(key int64) {
+	c.data.Delete(key)
+}
+
+func (c *MapCache) DeleteByKeys(keys []int64) {
+	for _, key := range keys {
+		c.data.Delete(key)
+	}
+}
+
+func (c *MapCache) Add(key int64, value any) {
+	c.data.Store(key, itemCache{
+		value:     value,
 		ExpiresAt: time.Now().Add(c.tTL),
 	})
 }
 
-func (c *MapCache) cleanTTL(ctx context.Context) {
+func (c *MapCache) CleanTTL(ctx context.Context) {
 	const op = "cache.cleanTTL"
 	logger := slog.With("op", op)
 

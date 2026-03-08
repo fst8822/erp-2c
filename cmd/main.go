@@ -72,12 +72,12 @@ func run() error {
 	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
 
 	mapCache := cache.NewMapCache(tTLCache)
-	repositoryCache := cache.NewRepositoryCache(ctx, deliveryRepository, mapCache)
+	repositoryCache := pg.NewRepositoryCache(ctx, deliveryRepository, &mapCache)
 
 	userService := use_cases.NewUserService(userRepository)
 	productService := use_cases.NewProductService(productRepository)
 	authService := use_cases.NewAuthService(userService)
-	deliveryService := use_cases.NewDeliveryService(deliveryRepository, productRepository, repositoryCache)
+	deliveryService := use_cases.NewDeliveryService(repositoryCache, productRepository)
 	notifyService := use_cases.NewNotifyService()
 
 	if err != nil {
