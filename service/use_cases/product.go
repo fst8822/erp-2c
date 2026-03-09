@@ -1,24 +1,18 @@
 package use_cases
 
 import (
-	"context"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
 	"log/slog"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type productRepoInt interface {
 	Save(productToSave model.ProductDB) (*model.ProductDB, error)
 	GetById(productId int64) (*model.ProductDB, error)
-	GetExistIds(tx *sqlx.Tx, productIds []int64) ([]int64, error)
 	GetByName(productName string) (*model.ProductDB, error)
 	GetAll() ([]model.ProductDB, error)
 	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
 	DeleteById(productId int64) error
-	GetByGroupName(groupId string) ([]model.ProductDB, error)
-	BeginTxx(ctx context.Context) (*sqlx.Tx, error)
 }
 
 type ProductService struct {
