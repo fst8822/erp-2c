@@ -2,8 +2,11 @@ package use_cases
 
 import (
 	"context"
+	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/lib/sl"
+	"erp-2c/lib/types"
 	"erp-2c/model"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/exp/slog"
@@ -17,7 +20,7 @@ type deliveryRepositoryInt interface {
 	UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error
 	DeleteById(tx *sqlx.Tx, deliveryId int64) error
 }
-type txManagerDeliveryRepo interface {
+type txManagerDeliveryRepoInt interface {
 	InTransaction(ctx context.Context, fn func(tx *sqlx.Tx) error) error
 }
 type productReposInt interface {
@@ -26,17 +29,19 @@ type productReposInt interface {
 
 type DeliveryService struct {
 	deliveryRepo  deliveryRepositoryInt
-	inTransaction txManagerDeliveryRepo
+	inTransaction txManagerDeliveryRepoInt
 	productRepo   productReposInt
 }
 
 func NewDeliveryService(
 	deliveryRepo deliveryRepositoryInt,
+	inTransaction txManagerDeliveryRepoInt,
 	productRepo productReposInt,
 ) *DeliveryService {
 	return &DeliveryService{
-		deliveryRepo: deliveryRepo,
-		productRepo:  productRepo,
+		deliveryRepo:  deliveryRepo,
+		inTransaction: inTransaction,
+		productRepo:   productRepo,
 	}
 }
 
@@ -45,97 +50,43 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 	sLogger := slog.With("op", op)
 	sLogger.Info("Begin save delivery.", slog.Any("delivery", delivery))
 
-	//ctx := context.TODO()
-	var deliveryItemsDomain model.DeliveryItemsDomain
+	ctx := context.TODO()
 	idsToCheck := make([]int64, 0, len(delivery.Items))
 
 	for _, item := range delivery.Items {
 		idsToCheck = append(idsToCheck, item.ProductID)
 	}
-	//err := d.inTransaction.InTransaction(ctx, func(tx *sqlx.Tx) error {
-	//	foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck) // todo важно
-	//	if err != nil {
-	//		sLogger.Error("failed check existing products", sl.Err(err))
-	//		return err
-	//	}
-	//
-	//	missingIds := findMissingIds(idsToCheck, foundIds)
-	//	if len(missingIds) > 0 {
-	//		sLogger.Error("No found product with ids ",
-	//			slog.Any("missing ids", missingIds))
-	//
-	//		return types.NewAppErr(
-	//			fmt.Sprintf("Products with ids %v not found",
-	//				missingIds), types.ErrNotFound)
-	//	}
-	//	deliveryWithItemsDB := delivery.MapToDBWithItems()
-	//	saved, err := d.deliveryRepo.SaveWithItems(tx, deliveryWithItemsDB)
-	//	if err != nil {
-	//		sLogger.Error("failed save delivery", sl.Err(err))
-	//		return err
-	//	}
-	//	app_metrics.TotalCountDelivery.Inc()
-	//	slog.Info("Saved delivery", slog.Int64("deliveryId", saved.ID))
-	//	delivery.ID = saved.ID
-	//	return nil
-	//})
-	//tx, err := d.deliveryRepo.BeginTxx(context.Background())
-	//if err != nil {
-	//	sLogger.Error("failed get tx", sl.Err(err))
-	//	return nil, err
-	//}
-	//sLogger.Info("Open transaction")
-	//
-	//defer func() {
-	//	err := tx.Rollback()
-	//	switch {
-	//	case err == nil:
-	//		sLogger.Info("transaction rolled back")
-	//	case errors.Is(err, sql.ErrTxDone):
-	//	default:
-	//		sLogger.Error("rollback failed", sl.Err(err))
-	//	}
-	//}()
-	//
-	//idsToCheck := make([]int64, 0, len(delivery.Items))
-	//for _, item := range delivery.Items {
-	//	idsToCheck = append(idsToCheck, item.ProductID)
-	//}
-	//
-	//foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck) // todo важно
-	//if err != nil {
-	//	sLogger.Error("failed check existing products", sl.Err(err))
-	//	return nil, err
-	//}
-	//
-	//missingIds := findMissingIds(idsToCheck, foundIds)
-	//if len(missingIds) > 0 {
-	//	sLogger.Warn("No found product with ids ",
-	//		slog.Any("missing ids", missingIds))
-	//
-	//	return nil, types.NewAppErr(
-	//		fmt.Sprintf("Products with ids %v not found",
-	//			missingIds), types.ErrNotFound)
-	//}
-	//
-	//deliveryWithItemsDB := delivery.MapToDBWithItems()
-	//saved, err := d.deliveryRepo.SaveWithItems(tx, deliveryWithItemsDB)
-	//if err != nil {
-	//	sLogger.Error("failed save delivery", sl.Err(err))
-	//	return nil, err
-	//}
-	//app_metrics.TotalCountDelivery.Inc()
-	//slog.Info("Saved delivery", slog.Int64("deliveryId", saved.ID))
-	//
-	//if err := tx.Commit(); err != nil {
-	//	slog.Error("failed commit tx", sl.Err(err))
-	//	return nil, err
-	//}
-	//sLogger.Info("Commit transaction")
-	//delivery.ID = saved.ID
-	//
-	//return &delivery, nil
-	return &deliveryItemsDomain, nil
+	err := d.inTransaction.InTransaction(ctx, func(tx *sqlx.Tx) error {
+		foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck) // todo важно
+		if err != nil {
+			sLogger.Error("failed check existing products", sl.Err(err))
+			return err
+		}
+
+		missingIds := findMissingIds(idsToCheck, foundIds)
+		if len(missingIds) > 0 {
+			sLogger.Error("No found product with ids ",
+				slog.Any("missing ids", missingIds))
+
+			return types.NewAppErr(
+				fmt.Sprintf("Products with ids %v not found",
+					missingIds), types.ErrNotFound)
+		}
+		deliveryWithItemsDB := delivery.MapToDBWithItems()
+		saved, err := d.deliveryRepo.SaveWithItems(tx, deliveryWithItemsDB)
+		if err != nil {
+			sLogger.Error("failed save delivery", sl.Err(err))
+			return err
+		}
+		slog.Info("Saved delivery", slog.Int64("deliveryId", saved.ID))
+		delivery.ID = saved.ID
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	app_metrics.TotalCountDelivery.Inc()
+	return &delivery, nil
 }
 
 func (d *DeliveryService) GetById(deliveryId int64) (*model.DeliveryItemsDomain, error) {

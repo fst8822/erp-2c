@@ -3,18 +3,15 @@ package security
 import (
 	"context"
 	"erp-2c/lib/response"
+	"erp-2c/model"
 	"fmt"
 	"net/http"
 	"strings"
 )
 
-type ContextKey string
-
 const (
-	authorization            = "Authorization"
-	bearer                   = "Bearer"
-	UserIdKey     ContextKey = "id"
-	UserRole      ContextKey = "role"
+	authorization = "Authorization"
+	bearer        = "Bearer"
 )
 
 func JwtMiddleware(next http.Handler) http.Handler {
@@ -54,8 +51,8 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserIdKey, id)
-		ctx = context.WithValue(ctx, UserRole, role)
+		ctx := context.WithValue(r.Context(), model.UserIdKey, id)
+		ctx = context.WithValue(ctx, model.UserRole, role)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

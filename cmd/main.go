@@ -73,11 +73,11 @@ func run() error {
 
 	mapCache := cache.NewMapCache(tTLCache)
 	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, &mapCache)
-
+	_ = deliveryCache
 	userService := use_cases.NewUserService(userRepository)
 	productService := use_cases.NewProductService(productRepository)
 	authService := use_cases.NewAuthService(userService)
-	deliveryService := use_cases.NewDeliveryService(deliveryCache, productRepository)
+	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, productRepository)
 	notifyService := use_cases.NewNotifyService()
 
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"erp-2c/lib/response"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
-	"erp-2c/security"
 	"log/slog"
 	"net/http"
 
@@ -44,7 +43,7 @@ func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.R
 	const OP = "controller.notify.NotifyController.UpgradeConnection"
 	logger := slog.With("OP", OP)
 
-	id := r.Context().Value(security.UserIdKey)
+	id := r.Context().Value(model.UserIdKey)
 	userID, ok := id.(int64)
 
 	if !ok {

@@ -48,7 +48,7 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 		response.ValidationError(err).SendResponse(w, r)
 		return
 	}
-	ID := r.Context().Value("UserIdKey")
+	ID := r.Context().Value(model.UserIdKey)
 	userID, ok := ID.(int64)
 	if !ok {
 		sLogger.Error("failed get user from context")
