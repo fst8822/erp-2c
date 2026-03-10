@@ -7,6 +7,7 @@ import (
 	"erp-2c/model"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -268,13 +269,20 @@ func (d *DeliveryRepository) GetStatusCount(tx *sqlx.Tx) ([]model.StatusCount, e
 	return statusCount, nil
 }
 
-func (d *DeliveryRepository) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+func (d *DeliveryRepository) InTransaction(ctx context.Context, fn func(tx *sqlx.Tx) error) error {
 	tx, err := d.db.BeginTxx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelReadCommitted,
 		ReadOnly:  false,
 	})
+	slog.Info("Begin TX")
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	return tx, nil
+	defer tx.Rollback()
+	err = fn(tx)
+	if err != nil {
+		return err
+	}
+	slog.Info("Commit TX")
+	return tx.Commit()
 }

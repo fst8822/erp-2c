@@ -113,10 +113,6 @@ func (c *DeliveryCache) UpdateStatusByIds(tx *sqlx.Tx, groups map[model.Delivery
 	return c.deliveryRepo.UpdateStatusByIds(tx, groups)
 }
 
-func (c *DeliveryCache) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
-	return c.deliveryRepo.BeginTxx(ctx)
-}
-
 func (c *DeliveryCache) addList(deliverListDB *model.DeliverListDB) {
 	mapItem := make(map[int64][]model.ItemsDB)
 	for _, v := range deliverListDB.ItemsDB {
