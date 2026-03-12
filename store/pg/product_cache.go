@@ -6,6 +6,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// ProductCache Save todo в разработке
 type ProductCache struct {
 	productRepo *ProductRepository
 	cache       cacheInt

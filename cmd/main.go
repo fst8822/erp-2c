@@ -71,9 +71,8 @@ func run() error {
 	userRepository := pg.NewUserRepository(db.Pg)
 	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
 
-	mapCache := cache.NewMapCache(tTLCache)
-	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, &mapCache)
-	_ = deliveryCache
+	mapCache := cache.NewMapCache(ctx, tTLCache)
+	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, mapCache)
 	userService := use_cases.NewUserService(userRepository)
 	productService := use_cases.NewProductService(productRepository)
 	authService := use_cases.NewAuthService(userService)

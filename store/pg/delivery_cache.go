@@ -9,9 +9,8 @@ import (
 
 type cacheInt interface {
 	Get(key int64) (any, bool)
-	GetAll() ([]any, bool)
+	GetAll() []any
 	Add(key int64, value any)
-	CleanTTL(ctx context.Context)
 	DeleteByKey(key int64)
 	DeleteByKeys(keys []int64)
 }
@@ -24,7 +23,6 @@ type DeliveryCache struct {
 func NewDeliveryCacheCache(ctx context.Context, deliveryRepo *DeliveryRepository, cache cacheInt,
 ) *DeliveryCache {
 	repo := DeliveryCache{deliveryRepo: deliveryRepo, cache: cache}
-	go cache.CleanTTL(ctx)
 	return &repo
 }
 
@@ -60,7 +58,7 @@ func (c *DeliveryCache) GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error) {
 	itemsDB := make([]model.ItemsDB, 100)
 	isInterrupt := false
 
-	if all, ok := c.cache.GetAll(); ok {
+	if all := c.cache.GetAll(); len(all) > 0 {
 		for _, v := range all {
 			it, ok2 := v.(model.DeliveryWithItemsDB)
 			if !ok2 {
@@ -92,25 +90,41 @@ func (c *DeliveryCache) GetAllWithItemsByStatus(tx *sqlx.Tx, status model.Delive
 }
 
 func (c *DeliveryCache) UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error {
+	err := c.deliveryRepo.UpdateById(tx, deliveryId, status)
+	if err != nil {
+		return err
+	}
 	c.cache.DeleteByKey(deliveryId)
-	return c.deliveryRepo.UpdateById(tx, deliveryId, status)
+	return nil
 }
 
 func (c *DeliveryCache) DeleteById(tx *sqlx.Tx, deliveryId int64) error {
+	err := c.deliveryRepo.DeleteById(tx, deliveryId)
+	if err != nil {
+		return err
+	}
 	c.cache.DeleteByKey(deliveryId)
-	return c.deliveryRepo.DeleteById(tx, deliveryId)
+	return nil
 }
 
 func (c *DeliveryCache) UpdateStatusById(tx *sqlx.Tx, deliveryId int64, status model.DeliveryStatus) error {
+	err := c.deliveryRepo.UpdateStatusById(tx, deliveryId, status)
+	if err != nil {
+		return err
+	}
 	c.cache.DeleteByKey(deliveryId)
-	return c.deliveryRepo.UpdateStatusById(tx, deliveryId, status)
+	return nil
 }
 
 func (c *DeliveryCache) UpdateStatusByIds(tx *sqlx.Tx, groups map[model.DeliveryStatus][]int64) error {
+	err := c.deliveryRepo.UpdateStatusByIds(tx, groups)
+	if err != nil {
+		return err
+	}
 	for _, keys := range groups {
 		c.cache.DeleteByKeys(keys)
 	}
-	return c.deliveryRepo.UpdateStatusByIds(tx, groups)
+	return nil
 }
 
 func (c *DeliveryCache) addList(deliverListDB *model.DeliverListDB) {

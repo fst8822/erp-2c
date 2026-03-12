@@ -14,14 +14,17 @@ type itemCache struct {
 
 type MapCache struct {
 	data sync.Map
-	tTL  time.Duration
+	ttl  time.Duration
 }
 
-func NewMapCache(tTL time.Duration) MapCache {
-	return MapCache{tTL: tTL}
+func NewMapCache(ctx context.Context, ttl time.Duration) *MapCache {
+	m := &MapCache{ttl: ttl}
+	go m.cleanTTL(ctx)
+	return m
 }
 
-func (c *MapCache) GetAll() ([]any, bool) {
+// todo нужна ли пагинация
+func (c *MapCache) GetAll() []any {
 	res := make([]any, 0, 100)
 
 	c.data.Range(func(key any, value any) bool {
@@ -31,10 +34,7 @@ func (c *MapCache) GetAll() ([]any, bool) {
 		}
 		return false
 	})
-	if len(res) == 0 {
-		return res, false
-	}
-	return res, true
+	return res
 }
 
 func (c *MapCache) Get(key int64) (any, bool) {
@@ -61,15 +61,15 @@ func (c *MapCache) DeleteByKeys(keys []int64) {
 func (c *MapCache) Add(key int64, value any) {
 	c.data.Store(key, itemCache{
 		value:     value,
-		ExpiresAt: time.Now().Add(c.tTL),
+		ExpiresAt: time.Now().Add(c.ttl),
 	})
 }
 
-func (c *MapCache) CleanTTL(ctx context.Context) {
+func (c *MapCache) cleanTTL(ctx context.Context) {
 	const op = "cache.cleanTTL"
 	logger := slog.With("op", op)
 
-	ticket := time.NewTicker(c.tTL)
+	ticket := time.NewTicker(c.ttl)
 	defer ticket.Stop()
 
 	select {

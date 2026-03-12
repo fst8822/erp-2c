@@ -12,7 +12,7 @@ import (
 type userRepositoryInt interface {
 	Save(userToSave model.UserDB) (*model.UserDB, error)
 	GetById(userId int64) (*model.UserDB, error)
-	GetByLogin(userId string) (*model.UserDB, error)
+	GetByLogin(login string) (*model.UserDB, error)
 	BeginTxx(ctx context.Context) (*sqlx.Tx, error)
 }
 
