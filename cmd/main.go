@@ -4,7 +4,7 @@ import (
 	"context"
 	"erp-2c/cache"
 	"erp-2c/config"
-	"erp-2c/controller/routers"
+	"erp-2c/controller"
 	"erp-2c/lib/collection"
 	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/lib/sl"
@@ -67,19 +67,28 @@ func run() error {
 		return err
 	}
 
-	storeRepo := store.NewStore(db.Pg)
-	mapCache := cache.NewMapCache(tTLCache)
-	repositoryCache := cache.NewRepositoryCache(ctx, storeRepo, mapCache)
-	serviceManager, err := use_cases.NewManager(storeRepo, repositoryCache)
+	productRepository := pg.NewProductRepository(db.Pg)
+	userRepository := pg.NewUserRepository(db.Pg)
+	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
+
+	mapCache := cache.NewMapCache(ctx, tTLCache)
+	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, mapCache)
+	userService := use_cases.NewUserService(userRepository)
+	productService := use_cases.NewProductService(productRepository)
+	authService := use_cases.NewAuthService(userService)
+	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, productRepository)
+	notifyService := use_cases.NewNotifyService()
+
 	if err != nil {
 		return err
 	}
 
-	go app_metrics.StartMetricsSync(ctx, storeRepo)
+	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
+
 	queue := collection.NewQueue(capacity)
 	workPoll := workers.NewWorkerPool(
-		serviceManager.NotifyService,
-		storeRepo.Delivery,
+		notifyService,
+		deliveryRepository,
 		queue,
 		countWorkers,
 		cron)
@@ -91,7 +100,13 @@ func run() error {
 		go workPoll.Run(ctx)
 	}()
 
-	r := routers.New(serviceManager)
+	r := controller.NewRouters(
+		authService,
+		deliveryService,
+		notifyService,
+		productService,
+		userService,
+	)
 	srv := &http.Server{
 		Addr:         cfg.HTTPAddress,
 		Handler:      r,
@@ -137,7 +152,7 @@ func run() error {
 	}
 
 	wg.Wait()
-	serviceManager.NotifyService.Shutdown()
+	notifyService.Shutdown()
 	slog.Info("Server shutdown gracefully")
 	return nil
 }

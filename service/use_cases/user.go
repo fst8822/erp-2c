@@ -1,19 +1,28 @@
 package use_cases
 
 import (
+	"context"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
-	"erp-2c/store"
 	"log/slog"
+
+	"github.com/jmoiron/sqlx"
 )
 
-type UserService struct {
-	store *store.Store
+type userRepositoryInt interface {
+	Save(userToSave model.UserDB) (*model.UserDB, error)
+	GetById(userId int64) (*model.UserDB, error)
+	GetByLogin(login string) (*model.UserDB, error)
+	BeginTxx(ctx context.Context) (*sqlx.Tx, error)
 }
 
-func NewUserService(store *store.Store) *UserService {
+type UserService struct {
+	userRepo userRepositoryInt
+}
+
+func NewUserService(userRepo userRepositoryInt) *UserService {
 	return &UserService{
-		store: store,
+		userRepo: userRepo,
 	}
 }
 
@@ -28,7 +37,7 @@ func (u *UserService) Save(userToSave model.SignUp) (*model.UserDomain, error) {
 		UserRole:  userToSave.UserRole,
 	}
 
-	saved, err := u.store.UserRepo.Save(userDB)
+	saved, err := u.userRepo.Save(userDB)
 	if err != nil {
 		slog.Error("Failed to save user", sl.ErrWithOP(err, op))
 		return nil, err
@@ -49,7 +58,7 @@ func (u *UserService) Save(userToSave model.SignUp) (*model.UserDomain, error) {
 func (u *UserService) GetById(userId int64) (*model.UserDomain, error) {
 	const op = "service.use_cases.user.GetById"
 
-	found, err := u.store.UserRepo.GetById(userId)
+	found, err := u.userRepo.GetById(userId)
 	if err != nil {
 		slog.Error("failed to find user", sl.ErrWithOP(err, op))
 		return nil, err
@@ -69,7 +78,7 @@ func (u *UserService) GetById(userId int64) (*model.UserDomain, error) {
 func (u *UserService) GetByLogin(userLogin string) (*model.UserDomain, error) {
 	const op = "service.use_cases.user.GetWithItemsById"
 
-	found, err := u.store.UserRepo.GetByLogin(userLogin)
+	found, err := u.userRepo.GetByLogin(userLogin)
 	if err != nil {
 		slog.Error("failed to find user", sl.ErrWithOP(err, op))
 		return nil, err

@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"context"
 	"database/sql"
 	"erp-2c/lib/types"
 	"erp-2c/model"
@@ -70,4 +71,15 @@ func (u *UserRepository) GetByLogin(login string) (*model.UserDB, error) {
 		return nil, types.NewAppErr("inspected SQL error", fmt.Errorf(err.Error(), types.ErrInspectedSQL))
 	}
 	return userDB, nil
+}
+
+func (u *UserRepository) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+	tx, err := u.db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	return tx, nil
 }

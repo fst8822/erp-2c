@@ -1,10 +1,8 @@
-package routers
+package controller
 
 import (
-	"erp-2c/controller"
 	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/security"
-	"erp-2c/service/use_cases"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,7 +11,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func New(serviceManager *use_cases.Manager) http.Handler {
+func NewRouters(
+	authService authServiceInt,
+	deliveryService deliveryServiceInt,
+	notifyService notifyServiceInt,
+	productService productServiceInt,
+	userService userServiceInt,
+) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -23,11 +27,11 @@ func New(serviceManager *use_cases.Manager) http.Handler {
 
 	validate := validator.New()
 
-	authController := controller.NewAuthController(serviceManager, validate)
-	userController := controller.NewUserController(serviceManager, validate)
-	productController := controller.NewProductController(serviceManager, validate)
-	deliveryController := controller.NewDeliveryController(serviceManager, validate)
-	notifyController := controller.NewNotifyController(serviceManager)
+	authController := NewAuthController(authService, validate)
+	userController := NewUserController(userService, validate)
+	productController := NewProductController(productService, validate)
+	deliveryController := NewDeliveryController(deliveryService, validate)
+	notifyController := NewNotifyController(notifyService)
 
 	router.Handle("/metrics", promhttp.Handler())
 	router.Route("/api/v1", func(r chi.Router) {

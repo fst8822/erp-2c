@@ -5,7 +5,6 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/lib/types"
 	"erp-2c/model"
-	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -16,15 +15,24 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type ProductController struct {
-	services *use_cases.Manager
-	validate *validator.Validate
+type productServiceInt interface {
+	Save(productToSave model.ProductToSave) (*model.ProductDomain, error)
+	GetById(productId int64) (*model.ProductDomain, error)
+	GetByName(productName string) (*model.ProductDomain, error)
+	GetAll() ([]model.ProductDomain, error)
+	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
+	DeleteById(productId int64) error
 }
 
-func NewProductController(services *use_cases.Manager, validate *validator.Validate) *ProductController {
+type ProductController struct {
+	productService productServiceInt
+	validate       *validator.Validate
+}
+
+func NewProductController(productService productServiceInt, validate *validator.Validate) *ProductController {
 	return &ProductController{
-		services: services,
-		validate: validate,
+		productService: productService,
+		validate:       validate,
 	}
 }
 
@@ -44,7 +52,7 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	saved, err := p.services.ProductService.Save(productToSave)
+	saved, err := p.productService.Save(productToSave)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -55,7 +63,7 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.GetAll"
 
-	products, err := p.services.ProductService.GetAll()
+	products, err := p.productService.GetAll()
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -74,7 +82,7 @@ func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := p.services.ProductService.GetById(productId)
+	found, err := p.productService.GetById(productId)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -92,7 +100,7 @@ func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	productDomain, err := p.services.ProductService.GetByName(productName)
+	productDomain, err := p.productService.GetByName(productName)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -119,7 +127,7 @@ func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := p.services.ProductService.UpdateById(productId, productToUpdate); err != nil {
+	if err := p.productService.UpdateById(productId, productToUpdate); err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
 	}
@@ -137,7 +145,7 @@ func (p *ProductController) DeleteById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := p.services.ProductService.DeleteById(productId); err != nil {
+	if err := p.productService.DeleteById(productId); err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
 	}

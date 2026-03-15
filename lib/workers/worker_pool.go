@@ -5,12 +5,21 @@ import (
 	"erp-2c/lib/collection"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
-	"erp-2c/service"
-	"erp-2c/store"
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
+
+type deliveryRepositoryInt interface {
+	LockAndGetDeliveries(status model.DeliveryStatus) ([]model.DeliveryDB, error)
+	UpdateStatusByIds(tx *sqlx.Tx, groups map[model.DeliveryStatus][]int64) error
+}
+
+type NotifyServiceInt interface {
+	SendNotify(notification model.Notification)
+}
 
 const bachSize = 4
 
@@ -18,8 +27,8 @@ type Worker interface {
 	Run(ctx context.Context)
 }
 type WorkerPool struct {
-	notify       service.NotifyService
-	deliveryRepo store.DeliveryRepository
+	notify       NotifyServiceInt
+	deliveryRepo deliveryRepositoryInt
 	queue        *collection.Queue
 	wg           *sync.WaitGroup
 	countWorkers int
@@ -27,8 +36,8 @@ type WorkerPool struct {
 }
 
 func NewWorkerPool(
-	notify service.NotifyService,
-	delivery store.DeliveryRepository,
+	notify NotifyServiceInt,
+	delivery deliveryRepositoryInt,
 	queue *collection.Queue,
 	countWorkers int,
 	cron time.Duration) *WorkerPool {

@@ -5,7 +5,6 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/lib/types"
 	"erp-2c/model"
-	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
 
@@ -13,15 +12,20 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type AuthController struct {
-	services *use_cases.Manager
-	validate *validator.Validate
+type authServiceInt interface {
+	SignUp(signUp model.SignUp) (*model.UserDomain, error)
+	SignIn(signIn model.SignIn) (string, error)
 }
 
-func NewAuthController(services *use_cases.Manager, validate *validator.Validate) *AuthController {
+type AuthController struct {
+	authService authServiceInt
+	validate    *validator.Validate
+}
+
+func NewAuthController(authService authServiceInt, validate *validator.Validate) *AuthController {
 	return &AuthController{
-		services: services,
-		validate: validate,
+		authService: authService,
+		validate:    validate,
 	}
 }
 
@@ -43,7 +47,7 @@ func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	saved, err := a.services.AuthService.SignUp(singUp)
+	saved, err := a.authService.SignUp(singUp)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -69,7 +73,7 @@ func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := a.services.AuthService.SignIn(signIn)
+	token, err := a.authService.SignIn(signIn)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return

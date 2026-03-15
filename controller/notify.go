@@ -6,14 +6,20 @@ import (
 	"erp-2c/lib/response"
 	"erp-2c/lib/sl"
 	"erp-2c/model"
-	"erp-2c/security"
-	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
+
+type notifyServiceInt interface {
+	Subscribe(ctx context.Context, client *model.ClientWS)
+	SendNotify(notification model.Notification)
+	AddClient(client *model.ClientWS)
+	RemoveClient(client *model.ClientWS)
+	Shutdown()
+}
 
 var (
 	websocketUpgrade = websocket.Upgrader{
@@ -26,18 +32,18 @@ var (
 )
 
 type NotifyController struct {
-	services *use_cases.Manager
+	notifyService notifyServiceInt
 }
 
-func NewNotifyController(services *use_cases.Manager) *NotifyController {
-	return &NotifyController{services: services}
+func NewNotifyController(notifyService notifyServiceInt) *NotifyController {
+	return &NotifyController{notifyService: notifyService}
 }
 
 func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.Request) {
 	const OP = "controller.notify.NotifyController.UpgradeConnection"
 	logger := slog.With("OP", OP)
 
-	id := r.Context().Value(security.UserIdKey)
+	id := r.Context().Value(model.UserIdKey)
 	userID, ok := id.(int64)
 
 	if !ok {
@@ -61,6 +67,6 @@ func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.R
 		Conn:   conn,
 		Cn:     make(chan model.Notification, model.NotificationBufferSize),
 	}
-	n.services.NotifyService.Subscribe(context.TODO(), client)
-	n.services.NotifyService.AddClient(client)
+	n.notifyService.Subscribe(context.TODO(), client)
+	n.notifyService.AddClient(client)
 }

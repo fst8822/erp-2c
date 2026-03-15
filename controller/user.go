@@ -5,7 +5,6 @@ import (
 	"erp-2c/lib/sl"
 	"erp-2c/lib/types"
 	"erp-2c/model"
-	"erp-2c/service/use_cases"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -15,15 +14,21 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type UserController struct {
-	services *use_cases.Manager
-	validate *validator.Validate
+type userServiceInt interface {
+	Save(userToSave model.SignUp) (*model.UserDomain, error)
+	GetById(userId int64) (*model.UserDomain, error)
+	GetByLogin(userId string) (*model.UserDomain, error)
 }
 
-func NewUserController(services *use_cases.Manager, validate *validator.Validate) *UserController {
+type UserController struct {
+	userService userServiceInt
+	validate    *validator.Validate
+}
+
+func NewUserController(userService userServiceInt, validate *validator.Validate) *UserController {
 	return &UserController{
-		services: services,
-		validate: validate,
+		userService: userService,
+		validate:    validate,
 	}
 }
 
@@ -38,7 +43,7 @@ func (c *UserController) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := c.services.UserService.GetById(userId)
+	found, err := c.userService.GetById(userId)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 	}
@@ -57,7 +62,7 @@ func (c *UserController) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	saved, err := c.services.UserService.Save(userToSave)
+	saved, err := c.userService.Save(userToSave)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return

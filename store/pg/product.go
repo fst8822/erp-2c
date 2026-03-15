@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"context"
 	"database/sql"
 	"erp-2c/lib/types"
 	"erp-2c/model"
@@ -169,4 +170,15 @@ func buildUpdateParams(productId int64, productToUpdate model.ProductUpdate) (ma
 	}
 	params["id"] = productId
 	return params, setFields
+}
+
+func (p *ProductRepository) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+	tx, err := p.db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	return tx, nil
 }

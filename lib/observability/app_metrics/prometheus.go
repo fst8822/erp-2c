@@ -2,13 +2,18 @@ package app_metrics
 
 import (
 	"context"
-	"erp-2c/store"
+	"erp-2c/model"
 	"log/slog"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
+
+type deliveryRepositoryInt interface {
+	GetStatusCount(tx *sqlx.Tx) ([]model.StatusCount, error)
+}
 
 const cron = time.Second * 10
 
@@ -56,7 +61,7 @@ var (
 	)
 )
 
-func StartMetricsSync(ctx context.Context, repo *store.Store) {
+func StartMetricsSync(ctx context.Context, deliveryRepo deliveryRepositoryInt) {
 	const op = "lib.observability.app_metrics.prometheus.StartMetricsSync"
 	logger := slog.With("op", op)
 
@@ -69,7 +74,7 @@ func StartMetricsSync(ctx context.Context, repo *store.Store) {
 			logger.Info("Context is done, stopped method StartMetricsSync")
 			return
 		case <-ticket.C:
-			res, err := repo.Delivery.GetStatusCount(nil)
+			res, err := deliveryRepo.GetStatusCount(nil)
 			logger.Info("Start work StartMetricsSync", slog.Int("len", len(res)))
 			if err != nil {
 				continue

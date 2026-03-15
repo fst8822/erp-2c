@@ -3,16 +3,24 @@ package use_cases
 import (
 	"erp-2c/lib/sl"
 	"erp-2c/model"
-	"erp-2c/store"
 	"log/slog"
 )
 
-type ProductService struct {
-	store *store.Store
+type productRepoInt interface {
+	Save(productToSave model.ProductDB) (*model.ProductDB, error)
+	GetById(productId int64) (*model.ProductDB, error)
+	GetByName(productName string) (*model.ProductDB, error)
+	GetAll() ([]model.ProductDB, error)
+	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
+	DeleteById(productId int64) error
 }
 
-func NewProductService(store *store.Store) *ProductService {
-	return &ProductService{store: store}
+type ProductService struct {
+	productRepo productRepoInt
+}
+
+func NewProductService(productRepo productRepoInt) *ProductService {
+	return &ProductService{productRepo: productRepo}
 }
 
 func (p *ProductService) Save(productToSave model.ProductToSave) (*model.ProductDomain, error) {
@@ -26,7 +34,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 		Price:        productToSave.Price,
 	}
 
-	saved, err := p.store.ProductRepo.Save(productDB)
+	saved, err := p.productRepo.Save(productDB)
 	if err != nil {
 		slog.Error("failed save product",
 			slog.String("product name", productToSave.ProductName), sl.ErrWithOP(err, op))
@@ -48,7 +56,7 @@ func (p *ProductService) Save(productToSave model.ProductToSave) (*model.Product
 func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) {
 	const op = "service.use_cases.product.GetWithItemsById"
 
-	product, err := p.store.ProductRepo.GetById(productId)
+	product, err := p.productRepo.GetById(productId)
 	if err != nil {
 		slog.Error("failed to find product", sl.ErrWithOP(err, op))
 		return nil, err
@@ -68,7 +76,7 @@ func (p *ProductService) GetById(productId int64) (*model.ProductDomain, error) 
 func (p *ProductService) GetByName(productName string) (*model.ProductDomain, error) {
 	const op = "service.use_cases.product.GetByName"
 
-	product, err := p.store.ProductRepo.GetByName(productName)
+	product, err := p.productRepo.GetByName(productName)
 	if err != nil {
 		slog.Error("failed to find user", sl.ErrWithOP(err, op))
 		return nil, err
@@ -88,7 +96,7 @@ func (p *ProductService) GetByName(productName string) (*model.ProductDomain, er
 func (p *ProductService) GetAll() ([]model.ProductDomain, error) {
 	const op = "service.use_cases.product.GetAll"
 
-	productsDB, err := p.store.ProductRepo.GetAll()
+	productsDB, err := p.productRepo.GetAll()
 	if err != nil {
 		slog.Error("failed to find products", sl.ErrWithOP(err, op))
 		return nil, err
@@ -113,7 +121,7 @@ func (p *ProductService) GetAll() ([]model.ProductDomain, error) {
 func (p *ProductService) UpdateById(productId int64, productToUpdate model.ProductUpdate) error {
 	const op = "service.use_cases.product.UpdateById"
 
-	if err := p.store.ProductRepo.UpdateById(productId, productToUpdate); err != nil {
+	if err := p.productRepo.UpdateById(productId, productToUpdate); err != nil {
 		slog.Error("failed to update product", sl.ErrWithOP(err, op))
 		return err
 	}
@@ -123,7 +131,7 @@ func (p *ProductService) UpdateById(productId int64, productToUpdate model.Produ
 func (p *ProductService) DeleteById(productId int64) error {
 	const op = "service.use_cases.product.DeleteById"
 
-	if err := p.store.ProductRepo.DeleteById(productId); err != nil {
+	if err := p.productRepo.DeleteById(productId); err != nil {
 		slog.Error("failed to delete product", sl.ErrWithOP(err, op))
 		return err
 	}
