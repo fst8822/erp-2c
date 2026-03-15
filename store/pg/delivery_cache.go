@@ -53,6 +53,7 @@ func (c *DeliveryCache) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (model.D
 	return deliveryWithItemsDB, nil
 }
 
+// GetAll todo переделать
 func (c *DeliveryCache) GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error) {
 	deliveries := make([]model.DeliveryDB, 100)
 	itemsDB := make([]model.ItemsDB, 100)
