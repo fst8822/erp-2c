@@ -2,13 +2,9 @@ package main
 
 import (
 	"context"
-	"erp-2c/cache"
 	"erp-2c/config"
 	"erp-2c/controller"
-	"erp-2c/lib/collection"
-	"erp-2c/lib/observability/app_metrics"
 	"erp-2c/lib/sl"
-	"erp-2c/lib/workers"
 	"erp-2c/service/use_cases"
 	"erp-2c/store"
 	"erp-2c/store/pg"
@@ -19,18 +15,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
-)
-
-const (
-	capacity     = 10
-	countWorkers = 5
-	cron         = 5
-	tTLCache     = time.Minute
 )
 
 func main() {
@@ -60,34 +48,10 @@ func main() {
 		return
 	}
 
-	productRepository := pg.NewProductRepository(db.Pg)
 	userRepository := pg.NewUserRepository(db.Pg)
-	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
-
-	mapCache := cache.NewMapCache(ctx, tTLCache)
-	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, mapCache)
 	userService := use_cases.NewUserService(userRepository)
-	productService := use_cases.NewProductService(productRepository)
 	authService := use_cases.NewAuthService(userService)
-	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, productRepository)
 	notifyService := use_cases.NewNotifyService()
-
-	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
-
-	queue := collection.NewQueue(capacity)
-	workPoll := workers.NewWorkerPool(
-		notifyService,
-		deliveryRepository,
-		queue,
-		countWorkers,
-		cron)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		go workPoll.Run(ctx)
-	}()
 
 	r := controller.NewRouters(
 		authService,
@@ -140,7 +104,6 @@ func main() {
 		}
 	}
 
-	wg.Wait()
 	notifyService.Shutdown()
 	slog.Info("Server shutdown gracefully")
 }

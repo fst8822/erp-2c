@@ -1,7 +1,7 @@
 package pg
 
 import (
-	"erp-2c/model"
+	"delivery-service/model"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -9,10 +9,10 @@ import (
 // ProductCache Save todo в разработке
 type ProductCache struct {
 	productRepo *ProductRepository
-	cache       cacheInt
+	cache       CacheInt
 }
 
-func NewProductCache(productRepo *ProductRepository, cache cacheInt) *ProductCache {
+func NewProductCache(productRepo *ProductRepository, cache CacheInt) *ProductCache {
 	return &ProductCache{productRepo: productRepo, cache: cache}
 }
 

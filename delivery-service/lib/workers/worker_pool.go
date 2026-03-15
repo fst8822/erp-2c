@@ -2,9 +2,9 @@ package workers
 
 import (
 	"context"
-	"erp-2c/lib/collection"
-	"erp-2c/lib/sl"
-	"erp-2c/model"
+	"delivery-service/lib/collection"
+	"delivery-service/lib/sl"
+	"delivery-service/model"
 	"log/slog"
 	"sync"
 	"time"

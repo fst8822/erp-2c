@@ -24,12 +24,3 @@ type ProductDomain struct {
 	Stock        int64
 	Price        int64
 }
-
-type ProductDB struct {
-	Id           int64  `db:"id"`
-	ProductName  string `db:"product_name"`
-	ProductGroup string `db:"product_group"`
-	Image        []byte `db:"image"`
-	Stock        int64  `db:"stock"`
-	Price        int64  `db:"price"`
-}

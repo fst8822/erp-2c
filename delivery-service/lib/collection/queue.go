@@ -1,6 +1,6 @@
 package collection
 
-import "erp-2c/model"
+import "delivery-service/model"
 
 type Queue struct {
 	in  chan model.DeliveryDB

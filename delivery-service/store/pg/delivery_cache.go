@@ -2,12 +2,12 @@ package pg
 
 import (
 	"context"
-	"erp-2c/model"
+	"delivery-service/model"
 
 	"github.com/jmoiron/sqlx"
 )
 
-type cacheInt interface {
+type CacheInt interface {
 	Get(key int64) (any, bool)
 	GetAll() []any
 	Add(key int64, value any)
@@ -17,10 +17,10 @@ type cacheInt interface {
 
 type DeliveryCache struct {
 	deliveryRepo *DeliveryRepository
-	cache        cacheInt
+	cache        CacheInt
 }
 
-func NewDeliveryCacheCache(ctx context.Context, deliveryRepo *DeliveryRepository, cache cacheInt,
+func NewDeliveryCacheCache(ctx context.Context, deliveryRepo *DeliveryRepository, cache CacheInt,
 ) *DeliveryCache {
 	repo := DeliveryCache{deliveryRepo: deliveryRepo, cache: cache}
 	return &repo

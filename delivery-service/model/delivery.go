@@ -1,7 +1,7 @@
 package model
 
 import (
-	"erp-2c/lib/types"
+	"delivery-service/lib/types"
 	"time"
 )
 
@@ -28,6 +28,33 @@ const (
 	CANCELLED DeliveryStatus = "CANCELLED"
 	ACCEPTED  DeliveryStatus = "ACCEPTED"
 )
+
+type DeliveryDB struct {
+	ID        int64          `db:"id"`
+	Recipient string         `db:"recipient"`
+	Address   string         `db:"address"`
+	Status    DeliveryStatus `db:"status"`
+	CreatedAt time.Time      `db:"created_at"`
+	UserID    int64          `db:"user_id"`
+}
+
+type ItemsDB struct {
+	ID         int64 `db:"id"`
+	DeliveryID int64 `db:"delivery_id"`
+	ProductID  int64 `db:"product_id"`
+	ItemPrice  int64 `db:"item_price"`
+	Quantity   int64 `db:"quantity"`
+}
+
+type DeliveryWithItemsDB struct {
+	DeliveryDB      DeliveryDB
+	DeliveryItemsDB []ItemsDB
+}
+
+type DeliverListDB struct {
+	DeliveriesDB []DeliveryDB
+	ItemsDB      []ItemsDB
+}
 
 type DeliverDomain struct {
 	ID            int64          `json:"id"`
@@ -106,6 +133,54 @@ func (d *DeliveryToSave) MapToDomain(UserID int64) DeliveryItemsDomain {
 			Status:    CREATED,
 			CreatedAt: time.Now(),
 			UserID:    UserID,
+		},
+		Items: items,
+	}
+	delivery.CalculateTotalAmount()
+	return delivery
+}
+
+func (i *DeliveryItemsDomain) MapToDBWithItems() DeliveryWithItemsDB {
+	var items = make([]ItemsDB, 0, len(i.Items))
+	for _, item := range i.Items {
+		items = append(items, ItemsDB{
+			ProductID: item.ProductID,
+			ItemPrice: item.ItemPrice,
+			Quantity:  item.Quantity,
+		})
+	}
+	return DeliveryWithItemsDB{
+		DeliveryDB: DeliveryDB{
+			Recipient: i.Recipient,
+			Address:   i.Address,
+			Status:    i.Status,
+			CreatedAt: i.CreatedAt,
+			UserID:    i.UserID,
+		},
+		DeliveryItemsDB: items,
+	}
+}
+
+func (d *DeliveryWithItemsDB) MapToDomain() DeliveryItemsDomain {
+	var items = make([]ItemDomain, 0, len(d.DeliveryItemsDB))
+	for _, item := range d.DeliveryItemsDB {
+		itemDomain := ItemDomain{
+			DeliveryID: item.DeliveryID,
+			ProductID:  item.ProductID,
+			ItemPrice:  item.ItemPrice,
+			Quantity:   item.Quantity,
+		}
+		itemDomain.totalAmount()
+		items = append(items, itemDomain)
+	}
+	delivery := DeliveryItemsDomain{
+		DeliverDomain: DeliverDomain{
+			ID:        d.DeliveryDB.ID,
+			Recipient: d.DeliveryDB.Recipient,
+			Address:   d.DeliveryDB.Address,
+			Status:    d.DeliveryDB.Status,
+			CreatedAt: d.DeliveryDB.CreatedAt,
+			UserID:    d.DeliveryDB.UserID,
 		},
 		Items: items,
 	}

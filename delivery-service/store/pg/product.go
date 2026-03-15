@@ -3,8 +3,8 @@ package pg
 import (
 	"context"
 	"database/sql"
-	"erp-2c/lib/types"
-	"erp-2c/model"
+	"delivery-service/lib/types"
+	"delivery-service/model"
 	"errors"
 	"fmt"
 	"strings"

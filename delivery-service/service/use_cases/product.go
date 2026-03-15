@@ -1,8 +1,8 @@
 package use_cases
 
 import (
-	"erp-2c/lib/sl"
-	"erp-2c/model"
+	"delivery-service/lib/sl"
+	"delivery-service/model"
 	"log/slog"
 )
 

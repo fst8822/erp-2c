@@ -2,10 +2,9 @@ package use_cases
 
 import (
 	"context"
-	"erp-2c/lib/observability/app_metrics"
-	"erp-2c/lib/sl"
-	"erp-2c/lib/types"
-	"erp-2c/model"
+	"delivery-service/lib/sl"
+	"delivery-service/lib/types"
+	"delivery-service/model"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -85,7 +84,8 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 	if err != nil {
 		return nil, err
 	}
-	app_metrics.TotalCountDelivery.Inc()
+	//todo add app_metrics
+	//app_metrics.TotalCountDelivery.Inc()
 	return &delivery, nil
 }
 
