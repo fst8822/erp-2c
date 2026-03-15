@@ -1,9 +1,9 @@
 package security
 
 import (
+	"api-gateway/lib/response"
+	"api-gateway/model"
 	"context"
-	"erp-2c/lib/response"
-	"erp-2c/model"
 	"fmt"
 	"net/http"
 	"strings"

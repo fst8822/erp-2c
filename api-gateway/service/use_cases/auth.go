@@ -1,10 +1,10 @@
 package use_cases
 
 import (
-	"erp-2c/lib/sl"
-	"erp-2c/lib/types"
-	"erp-2c/model"
-	"erp-2c/security"
+	"api-gateway/lib/sl"
+	"api-gateway/lib/types"
+	"api-gateway/model"
+	"api-gateway/security"
 	"fmt"
 	"log/slog"
 

@@ -1,9 +1,9 @@
 package use_cases
 
 import (
+	"api-gateway/lib/sl"
+	"api-gateway/model"
 	"context"
-	"erp-2c/lib/sl"
-	"erp-2c/model"
 	"log/slog"
 
 	"github.com/jmoiron/sqlx"

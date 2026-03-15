@@ -1,8 +1,8 @@
 package pg
 
 import (
-	"erp-2c/config"
-	"erp-2c/lib/sl"
+	"api-gateway/config"
+	"api-gateway/lib/sl"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"

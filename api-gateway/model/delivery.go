@@ -1,7 +1,7 @@
 package model
 
 import (
-	"erp-2c/lib/types"
+	"api-gateway/lib/types"
 	"time"
 )
 

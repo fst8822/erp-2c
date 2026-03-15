@@ -1,13 +1,13 @@
 package main
 
 import (
+	"api-gateway/config"
+	"api-gateway/controller"
+	"api-gateway/lib/sl"
+	"api-gateway/service/use_cases"
+	"api-gateway/store"
+	"api-gateway/store/pg"
 	"context"
-	"erp-2c/config"
-	"erp-2c/controller"
-	"erp-2c/lib/sl"
-	"erp-2c/service/use_cases"
-	"erp-2c/store"
-	"erp-2c/store/pg"
 	"errors"
 	"fmt"
 	"log"
@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/joho/godotenv"
 )

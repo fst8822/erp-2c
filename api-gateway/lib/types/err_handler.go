@@ -1,7 +1,7 @@
 package types
 
 import (
-	"erp-2c/lib/response"
+	"api-gateway/lib/response"
 	"errors"
 )
 

@@ -1,10 +1,10 @@
 package pg
 
 import (
+	"api-gateway/lib/types"
+	"api-gateway/model"
 	"context"
 	"database/sql"
-	"erp-2c/lib/types"
-	"erp-2c/model"
 	"errors"
 	"fmt"
 

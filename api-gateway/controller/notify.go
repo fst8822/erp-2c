@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"api-gateway/lib/observability/app_metrics"
+	"api-gateway/lib/response"
+	"api-gateway/lib/sl"
+	"api-gateway/model"
 	"context"
-	"erp-2c/lib/observability/app_metrics"
-	"erp-2c/lib/response"
-	"erp-2c/lib/sl"
-	"erp-2c/model"
 	"log/slog"
 	"net/http"
 

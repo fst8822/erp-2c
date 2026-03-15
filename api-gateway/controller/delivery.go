@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"erp-2c/lib/response"
-	"erp-2c/lib/sl"
-	"erp-2c/lib/types"
-	"erp-2c/model"
+	"api-gateway/lib/response"
+	"api-gateway/lib/sl"
+	"api-gateway/lib/types"
+	"api-gateway/model"
 	"net/http"
 	"strconv"
 

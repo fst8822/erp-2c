@@ -1,8 +1,8 @@
 package store
 
 import (
-	"erp-2c/config"
-	"erp-2c/lib/sl"
+	"api-gateway/config"
+	"api-gateway/lib/sl"
 	"errors"
 	"fmt"
 	"log/slog"

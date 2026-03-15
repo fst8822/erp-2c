@@ -1,10 +1,10 @@
 package use_cases
 
 import (
+	"api-gateway/lib/observability/app_metrics"
+	"api-gateway/lib/sl"
+	"api-gateway/model"
 	"context"
-	"erp-2c/lib/observability/app_metrics"
-	"erp-2c/lib/sl"
-	"erp-2c/model"
 	"sync"
 	"time"
 

@@ -1,18 +1,16 @@
 package controller
 
 import (
-	"erp-2c/lib/response"
-	"erp-2c/lib/sl"
-	"erp-2c/lib/types"
-	"erp-2c/model"
+	"api-gateway/lib/response"
+	"api-gateway/lib/sl"
+	"api-gateway/lib/types"
+	"api-gateway/model"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 )
 
 type productServiceInt interface {

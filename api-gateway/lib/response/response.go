@@ -1,7 +1,7 @@
 package response
 
 import (
-	"erp-2c/lib/sl"
+	"api-gateway/lib/sl"
 	"errors"
 	"fmt"
 	"log/slog"

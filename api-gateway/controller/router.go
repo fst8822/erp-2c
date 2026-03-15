@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"erp-2c/lib/observability/app_metrics"
-	"erp-2c/security"
+	"api-gateway/lib/observability/app_metrics"
+	"api-gateway/security"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
