@@ -888,3 +888,46 @@ func (c *DeliveryCache) addList(deliverListDB *model.DeliverListDB) {
 		c.cache.Add(v.ID, deliveryWithItemsDB)
 	}
 }
+
+для теста panici
+func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error) {
+	const op = "service.use_cases.delivery.Save"
+	sLogger := slog.With("op", op)
+	sLogger.Info("Begin save delivery.", slog.Any("delivery", delivery))
+
+	ctx := context.TODO()
+	var deliveryItemsDomain model.DeliveryItemsDomain
+	idsToCheck := make([]int64, 0, len(delivery.Items))
+
+	for _, item := range delivery.Items {
+		idsToCheck = append(idsToCheck, item.ProductID)
+	}
+	err := d.inTransaction.InTransaction(ctx, func(tx *sqlx.Tx) error {
+		foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck) // todo важно
+		if err != nil {
+			sLogger.Error("failed check existing products", sl.Err(err))
+			return err
+		}
+
+		missingIds := findMissingIds(idsToCheck, foundIds)
+		if len(missingIds) > 0 {
+			sLogger.Error("No found product with ids ",
+				slog.Any("missing ids", missingIds))
+
+			return types.NewAppErr(
+				fmt.Sprintf("Products with ids %v not found",
+					missingIds), types.ErrNotFound)
+		}
+		deliveryWithItemsDB := delivery.MapToDBWithItems()
+		saved, err := d.deliveryRepo.SaveWithItems(tx, deliveryWithItemsDB)
+		if err != nil {
+			sLogger.Error("failed save delivery", sl.Err(err))
+			return err
+		}
+		app_metrics.TotalCountDelivery.Inc()
+		slog.Info("Saved delivery", slog.Int64("deliveryId", saved.ID))
+		delivery.ID = saved.ID
+		return nil
+	})
+	return &deliveryItemsDomain, err
+}
