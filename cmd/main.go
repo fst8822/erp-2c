@@ -34,12 +34,6 @@ const (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func loadENV() {
 	env := os.Getenv("ENV")
 	if env == "" {
 		env = "local"
@@ -48,23 +42,22 @@ func loadENV() {
 		log.Fatal("No .env file found")
 	}
 	fmt.Printf("RUN APP: env=%s\n", env)
-}
 
-func run() error {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
 
-	loadENV()
 	cfg := config.Get()
 
 	db, err := pg.Dial()
 	if err != nil {
-		return err
+		slog.Error("Error connect to DB", err)
+		return
 	}
 	defer db.Pg.Close()
 
 	if err := store.RunPgMigrations(db.Pg); err != nil {
-		return err
+		slog.Error("Error run migrations DB", err)
+		return
 	}
 
 	productRepository := pg.NewProductRepository(db.Pg)
@@ -78,10 +71,6 @@ func run() error {
 	authService := use_cases.NewAuthService(userService)
 	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, productRepository)
 	notifyService := use_cases.NewNotifyService()
-
-	if err != nil {
-		return err
-	}
 
 	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
 
@@ -154,5 +143,4 @@ func run() error {
 	wg.Wait()
 	notifyService.Shutdown()
 	slog.Info("Server shutdown gracefully")
-	return nil
 }
