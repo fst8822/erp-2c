@@ -14,8 +14,9 @@
   }
 
   message EmptyResponse {}
+
   service NotifyService {
-     rpc   SendNotify(Notification) returns (EmptyResponse);
+     rpc SendNotify(Notification) returns (EmptyResponse);
   }
 
 
