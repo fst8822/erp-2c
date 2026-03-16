@@ -50,7 +50,7 @@
    rpc  Save(ProductToSave) returns (ProductDomain);
    rpc  GetById(RequestProductID) returns (ProductDomain);
    rpc  GetByName(RequestProductName) returns (ProductDomain);
-   rpc  GetAll(EmptyRequest) returns (GetAllProduct);
+   rpc  GetAll(EmptyRequest) returns (stream GetAllProduct);
    rpc  UpdateById(UpdateProductByRequestID) returns (EmptyResponse);
    rpc  DeleteById(RequestProductID) returns (EmptyResponse);
   }
