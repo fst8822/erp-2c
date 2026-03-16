@@ -59,7 +59,7 @@ func main() {
 	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
 	queue := collection.NewQueue(capacity)
 	workPoll := workers.NewWorkerPool(
-		notifyService,
+		nil, //notifyService,
 		deliveryRepository,
 		queue,
 		countWorkers,
@@ -72,4 +72,6 @@ func main() {
 		go workPoll.Run(ctx)
 	}()
 	wg.Wait()
+
+	//todo add graceful shutdown
 }

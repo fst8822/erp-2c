@@ -1,0 +1,56 @@
+  syntax = "proto3";
+  option go_package = "erp-2c/v1/product-grpc";
+
+  message ProductToSave {
+    string ProductName = 1;
+    string ProductGroup = 2;
+    bytes Image = 3;
+    int64 Stock = 4;
+    int64 Price = 5;
+  }
+
+  message ProductUpdate {
+    string ProductName = 1;
+    string ProductGroup = 2;
+    bytes Image = 3;
+    int64 Stock = 4;
+    int64 Price = 5;
+  }
+
+  message UpdateProductByRequestID {
+    int64 productID = 1;
+    ProductUpdate productToUpdate = 2;
+  }
+
+  message ProductDomain {
+    int64 Id = 1;
+    string ProductName = 2;
+    string ProductGroup = 3;
+    bytes Image = 4;
+    int64 Stock = 5;
+    int64 Price = 6;
+  }
+
+  message EmptyRequest {}
+  message EmptyResponse {}
+
+  message RequestProductID {
+    int64 ID = 1;
+  }
+
+  message RequestProductName{
+    string name = 1;
+  }
+
+  message GetAllProduct {
+    repeated ProductDomain product = 1;
+  }
+
+  service ProductService {
+   rpc  Save(ProductToSave) returns (ProductDomain);
+   rpc  GetById(RequestProductID) returns (ProductDomain);
+   rpc  GetByName(RequestProductName) returns (ProductDomain);
+   rpc  GetAll(EmptyRequest) returns (GetAllProduct);
+   rpc  UpdateById(UpdateProductByRequestID) returns (EmptyResponse);
+   rpc  DeleteById(RequestProductID) returns (EmptyResponse);
+  }

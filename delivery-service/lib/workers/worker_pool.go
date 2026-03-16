@@ -151,17 +151,17 @@ func (w *WorkerPool) updateDBItem() {
 		groups[deliveryDB.Status] = append(groups[deliveryDB.Status], deliveryDB.ID)
 		logger.Info("Start processing out channel", slog.Int64("DeliveryID", deliveryDB.ID))
 
-		go func(deliveryDB model.DeliveryDB) {
-			notification := model.Notification{
-				DeliveryId: deliveryDB.ID,
-				Status:     deliveryDB.Status,
-				CreatedAt:  time.Now(),
-				UserID:     deliveryDB.UserID,
-			}
-			logger.Info("Start Send Notification")
-			//user stream grpc
-			w.notify.SendNotify(notification)
-		}(deliveryDB)
+		//go func(deliveryDB model.DeliveryDB) {
+		//	notification := model.Notification{
+		//		DeliveryId: deliveryDB.ID,
+		//		Status:     deliveryDB.Status,
+		//		CreatedAt:  time.Now(),
+		//		UserID:     deliveryDB.UserID,
+		//	}
+		//	logger.Info("Start Send Notification")
+		//	//user stream grpc
+		//	w.notify.SendNotify(notification)
+		//}(deliveryDB)
 
 		select {
 		case <-ticket.C:

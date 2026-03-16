@@ -54,9 +54,9 @@ func main() {
 
 	r := controller.NewRouters(
 		authService,
-		deliveryService,
+		nil, //deliveryService,
 		notifyService,
-		productService,
+		nil, //productService,
 		userService,
 	)
 	srv := &http.Server{
