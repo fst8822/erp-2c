@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"delivery-service/cache"
-	"delivery-service/config"
+	_ "delivery-service/config"
 	"delivery-service/lib/collection"
 	"delivery-service/lib/observability/app_metrics"
 	"delivery-service/lib/workers"
@@ -38,12 +38,6 @@ func main() {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	defer ctxCancel()
-
-	cfg := config.Get()
-	_ = cfg
-
-	//ctx, ctxCancel := context.WithCancel(context.Background())
-	//defer ctxCancel()
 
 	db, err := pg.Dial()
 	if err != nil {

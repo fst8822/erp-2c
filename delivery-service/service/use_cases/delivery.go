@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"context"
+	"delivery-service/lib/observability/app_metrics"
 	"delivery-service/lib/sl"
 	"delivery-service/lib/types"
 	"delivery-service/model"
@@ -85,7 +86,7 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 		return nil, err
 	}
 	//todo add app_metrics
-	//app_metrics.TotalCountDelivery.Inc()
+	app_metrics.TotalCountDelivery.Inc()
 	return &delivery, nil
 }
 

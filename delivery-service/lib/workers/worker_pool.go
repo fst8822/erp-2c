@@ -159,6 +159,7 @@ func (w *WorkerPool) updateDBItem() {
 				UserID:     deliveryDB.UserID,
 			}
 			logger.Info("Start Send Notification")
+			//user stream grpc
 			w.notify.SendNotify(notification)
 		}(deliveryDB)
 
