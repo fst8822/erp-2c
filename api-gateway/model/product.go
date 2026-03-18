@@ -24,3 +24,12 @@ type ProductDomain struct {
 	Stock        int64
 	Price        int64
 }
+
+type ProductResponse struct {
+	Id           int64  `json:"id,omitempty"`
+	ProductName  string `json:"product_name,omitempty"`
+	ProductGroup string `json:"product_group,omitempty"`
+	Image        []byte `json:"image,omitempty"`
+	Stock        int64  `json:"stock,omitempty"`
+	Price        int64  `json:"price,omitempty"`
+}

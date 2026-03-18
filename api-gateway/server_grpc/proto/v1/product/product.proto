@@ -1,17 +1,19 @@
   syntax = "proto3";
-  option go_package = "erp-2c/v1/product-grpc";
+  option go_package = "erp-2c/api-gateway/server_grpc";
+
+  import "google/protobuf/empty.proto";
 
   message ProductToSave {
-    string ProductName = 1;
-    string ProductGroup = 2;
+    string Product_name = 1;
+    string Product_group = 2;
     bytes Image = 3;
     int64 Stock = 4;
     int64 Price = 5;
   }
 
   message ProductUpdate {
-    string ProductName = 1;
-    string ProductGroup = 2;
+    string Product_name = 1;
+    string Product_group = 2;
     bytes Image = 3;
     int64 Stock = 4;
     int64 Price = 5;
@@ -23,19 +25,16 @@
   }
 
   message ProductDomain {
-    int64 Id = 1;
-    string ProductName = 2;
-    string ProductGroup = 3;
+    int64 id = 1;
+    string Product_name = 2;
+    string Product_group = 3;
     bytes Image = 4;
     int64 Stock = 5;
     int64 Price = 6;
   }
 
-  message EmptyRequest {}
-  message EmptyResponse {}
-
   message RequestProductID {
-    int64 ID = 1;
+    int64 id = 1;
   }
 
   message RequestProductName{
@@ -50,7 +49,7 @@
    rpc  Save(ProductToSave) returns (ProductDomain);
    rpc  GetById(RequestProductID) returns (ProductDomain);
    rpc  GetByName(RequestProductName) returns (ProductDomain);
-   rpc  GetAll(EmptyRequest) returns (stream GetAllProduct);
-   rpc  UpdateById(UpdateProductByRequestID) returns (EmptyResponse);
-   rpc  DeleteById(RequestProductID) returns (EmptyResponse);
+   rpc  GetAll(google.protobuf.Empty) returns (stream ProductDomain);
+   rpc  UpdateById(UpdateProductByRequestID) returns (google.protobuf.Empty);
+   rpc  DeleteById(RequestProductID) returns (google.protobuf.Empty);
   }

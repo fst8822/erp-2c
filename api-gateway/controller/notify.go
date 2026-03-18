@@ -15,10 +15,7 @@ import (
 
 type notifyServiceInt interface {
 	Subscribe(ctx context.Context, client *model.ClientWS)
-	SendNotify(notification model.Notification)
 	AddClient(client *model.ClientWS)
-	RemoveClient(client *model.ClientWS)
-	Shutdown()
 }
 
 var (

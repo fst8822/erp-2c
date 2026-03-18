@@ -3,6 +3,8 @@ package controller
 import (
 	"api-gateway/lib/observability/app_metrics"
 	"api-gateway/security"
+	deliverygrpc "api-gateway/server_grpc/proto/v1/delivery"
+	productgrpc "api-gateway/server_grpc/proto/v1/product"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,9 +15,9 @@ import (
 
 func NewRouters(
 	authService authServiceInt,
-	deliveryService deliveryServiceInt,
+	deliveryClientGRPC deliverygrpc.DeliveryServiceClient,
 	notifyService notifyServiceInt,
-	productService productServiceInt,
+	productClientGRPC productgrpc.ProductServiceClient,
 	userService userServiceInt,
 ) http.Handler {
 	router := chi.NewRouter()
@@ -29,8 +31,8 @@ func NewRouters(
 
 	authController := NewAuthController(authService, validate)
 	userController := NewUserController(userService, validate)
-	productController := NewProductController(productService, validate)
-	deliveryController := NewDeliveryController(deliveryService, validate)
+	productController := NewProductController(productClientGRPC, validate)
+	deliveryController := NewDeliveryController(deliveryClientGRPC, validate)
 	notifyController := NewNotifyController(notifyService)
 
 	router.Handle("/metrics", promhttp.Handler())

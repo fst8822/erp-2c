@@ -82,6 +82,24 @@ type DeliveryItemToSave struct {
 	Quantity  int64 `json:"quantity" validate:"gt=0"`
 }
 
+type DeliveryResponse struct {
+	ID            int64          `json:"id"`
+	Recipient     string         `json:"recipient"`
+	Address       string         `json:"address"`
+	Status        DeliveryStatus `json:"status"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UserID        int64          `json:"user_id"`
+	DeliverAmount int64          `json:"deliver_amount"`
+	Items         []ItemResponse `json:"items"`
+}
+
+type ItemResponse struct {
+	DeliveryID int64 `json:"-"`
+	ProductID  int64 `json:"product_id"`
+	ItemPrice  int64 `json:"item_price"`
+	Quantity   int64 `json:"quantity"`
+	ItemAmount int64 `json:"item_amount"`
+}
 type UpdateStatus struct {
 	DeliveryId int64          `json:"id" validate:"gt=0"`
 	Status     DeliveryStatus `json:"status" validate:"required,min=1"`
