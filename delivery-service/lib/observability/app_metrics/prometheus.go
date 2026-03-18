@@ -54,8 +54,8 @@ func StartMetricsSync(ctx context.Context, deliveryRepo deliveryRepositoryInt) {
 	logger := slog.With("op", op)
 
 	ticket := time.NewTicker(cron)
-
 	defer ticket.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():

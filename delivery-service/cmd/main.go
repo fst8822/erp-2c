@@ -7,23 +7,33 @@ import (
 	"delivery-service/lib/collection"
 	"delivery-service/lib/observability/app_metrics"
 	"delivery-service/lib/workers"
+	"delivery-service/server_grpc"
+	servergrpc "delivery-service/server_grpc/proto/v1/delivery"
+	clientrgrpc "delivery-service/server_grpc/proto/v1/notify"
 	"delivery-service/service/use_cases"
 	"delivery-service/store/pg"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
 	"golang.org/x/exp/slog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
-	capacity     = 10
-	countWorkers = 5
-	cron         = 5
-	tTLCache     = time.Minute
+	capacity          = 10
+	countWorkers      = 5
+	cron              = 5
+	tTLCache          = time.Minute
+	forceShutdownTime = 5
 )
 
 func main() {
@@ -46,20 +56,43 @@ func main() {
 	}
 	defer db.Pg.Close()
 
+	mapCache := cache.NewMapCache(ctx, tTLCache)
+
 	productRepository := pg.NewProductRepository(db.Pg)
 	productService := use_cases.NewProductService(productRepository)
-	_ = productService
 
 	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
-	mapCache := cache.NewMapCache(ctx, tTLCache)
 	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, mapCache)
 	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, productRepository)
-	_ = deliveryService
 
+	server_grpc.NewProductGRPCServer(productService)
+	server_grpc.NewDeliveryGRPCServer(deliveryService)
+
+	//todo add handler func for app_metrics
 	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
+
+	les, err := net.Listen("tcp", "localhost:50051")
+	if err != nil {
+		slog.Error("Failed to lister", err)
+	}
+
+	s := grpc.NewServer()
+	servergrpc.RegisterDeliveryServiceServer(s, &server_grpc.DeliveryGRPCServer{})
+
+	conn, err := grpc.NewClient(
+		"localhost:50052",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		slog.Error("Connection to grpc server failed", err)
+	}
+	defer conn.Close()
+
+	clientNotifyGRPC := clientrgrpc.NewNotifyServiceClient(conn)
+
 	queue := collection.NewQueue(capacity)
 	workPoll := workers.NewWorkerPool(
-		nil, //notifyService,
+		clientNotifyGRPC,
 		deliveryRepository,
 		queue,
 		countWorkers,
@@ -71,7 +104,42 @@ func main() {
 		defer wg.Done()
 		go workPoll.Run(ctx)
 	}()
-	wg.Wait()
 
-	//todo add graceful shutdown
+	go func() {
+		slog.Info("Start server grpc", slog.String("tcp", "localhost:50051"))
+		if err := s.Serve(les); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			slog.Error("Failed to grpc Serve", err)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case <-stop:
+		slog.Info("Shutdown signal is received")
+	case <-ctx.Done():
+		slog.Info("Context cancelled")
+	}
+
+	slog.Info("Starting graceful shutdown")
+	ctxCancel()
+
+	done := make(chan struct{})
+	go func() {
+		s.GracefulStop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		slog.Info("GRPC Server stopped gracefully")
+	case <-time.After(forceShutdownTime):
+		s.Stop()
+		slog.Info("GRPC Server Close Force ")
+	}
+	slog.Info("Start wait group")
+	wg.Wait()
+	slog.Info("End wait group")
+	slog.Info("Server shutdown gracefully")
 }
