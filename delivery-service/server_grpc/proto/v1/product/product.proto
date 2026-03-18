@@ -1,0 +1,51 @@
+  syntax = "proto3";
+  option go_package = "erp-2c/delivery-service/server_grpc";
+
+  import "google/protobuf/empty.proto";
+
+  message ProductToSave {
+    string Product_name = 1;
+    string Product_group = 2;
+    bytes Image = 3;
+    int64 Stock = 4;
+    int64 Price = 5;
+  }
+
+  message ProductUpdate {
+    string Product_name = 1;
+    string Product_group = 2;
+    bytes Image = 3;
+    int64 Stock = 4;
+    int64 Price = 5;
+  }
+
+  message UpdateProductByRequestID {
+    int64 productID = 1;
+    ProductUpdate productToUpdate = 2;
+  }
+
+  message ProductDomain {
+    int64 id = 1;
+    string Product_name = 2;
+    string Product_group = 3;
+    bytes Image = 4;
+    int64 Stock = 5;
+    int64 Price = 6;
+  }
+
+  message RequestProductID {
+    int64 id = 1;
+  }
+
+  message RequestProductName{
+    string name = 1;
+  }
+
+  service ProductService {
+   rpc  Save(ProductToSave) returns (ProductDomain);
+   rpc  GetById(RequestProductID) returns (ProductDomain);
+   rpc  GetByName(RequestProductName) returns (ProductDomain);
+   rpc  GetAll(google.protobuf.Empty) returns (stream ProductDomain);
+   rpc  UpdateById(UpdateProductByRequestID) returns (google.protobuf.Empty);
+   rpc  DeleteById(RequestProductID) returns (google.protobuf.Empty);
+  }
