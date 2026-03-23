@@ -6,7 +6,6 @@ import (
 	"api-gateway/lib/types"
 	"api-gateway/model"
 	deliverygrpc "api-gateway/server_grpc/proto/v1/delivery"
-	"context"
 	"io"
 	"net/http"
 	"strconv"
@@ -32,9 +31,6 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 	const op = "control.delivery.Save"
 	sLogger := slog.With("OP", op)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	var requestBody model.DeliveryToSave
 	if err := render.DecodeJSON(r.Body, &requestBody); err != nil {
 		sLogger.Error("failed pare request body", sl.Err(err))
@@ -47,15 +43,15 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 		response.ValidationError(err).SendResponse(w, r)
 		return
 	}
-	ID := r.Context().Value(model.UserIdKey)
-	userID, ok := ID.(int64)
+
+	userID, ok := model.UserIDFromContext(r.Context())
 	if !ok {
 		sLogger.Error("failed get user from context")
 		response.InternalServerError().SendResponse(w, r)
 		return
 	}
 
-	itemDomains := make([]*deliverygrpc.ItemDomain, 0, len(requestBody.Items))
+	itemDomains := make([]*deliverygrpc.ItemDomain, len(requestBody.Items))
 	for i, item := range requestBody.Items {
 		itemDomains[i] = &deliverygrpc.ItemDomain{
 			ProductId:  item.ProductId,
@@ -64,7 +60,7 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 			ItemAmount: 0,
 		}
 	}
-	saved, err := d.deliveryClientGRPC.Save(ctx, &deliverygrpc.DeliveryItemsDomain{
+	saved, err := d.deliveryClientGRPC.Save(r.Context(), &deliverygrpc.DeliveryItemsDomain{
 		Delivery: &deliverygrpc.DeliverDomain{
 			Recipient: requestBody.Recipient,
 			Address:   requestBody.Address,
@@ -78,7 +74,7 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	itemsResponse := make([]model.ItemResponse, 0, len(saved.Items))
+	itemsResponse := make([]model.ItemResponse, len(saved.Items))
 	for i, item := range saved.Items {
 		itemsResponse[i] = model.ItemResponse{
 			DeliveryID: item.DeliveryId,
@@ -89,7 +85,7 @@ func (d *DeliveryController) Save(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	deliveryResponse := model.DeliveryResponse{
-		ID:            saved.Delivery.Id,
+		ID:            saved.Delivery.ID,
 		Recipient:     saved.Delivery.Recipient,
 		Address:       saved.Delivery.Address,
 		Status:        model.DeliveryStatus(saved.Delivery.Status.Status),
@@ -105,9 +101,6 @@ func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.delivery.GetWithItemsById"
 	sLogger := slog.With("op", op)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -116,12 +109,12 @@ func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := d.deliveryClientGRPC.GetById(ctx, &deliverygrpc.RequestDeliveryID{DeliveryId: id})
+	found, err := d.deliveryClientGRPC.GetById(r.Context(), &deliverygrpc.RequestDeliveryID{DeliveryId: id})
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-	itemsResponse := make([]model.ItemResponse, 0, len(found.Items))
+	itemsResponse := make([]model.ItemResponse, len(found.Items))
 	for i, item := range found.Items {
 		itemsResponse[i] = model.ItemResponse{
 			DeliveryID: item.DeliveryId,
@@ -132,7 +125,7 @@ func (d *DeliveryController) GetById(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	deliveryResponse := model.DeliveryResponse{
-		ID:            found.Delivery.Id,
+		ID:            found.Delivery.ID,
 		Recipient:     found.Delivery.Recipient,
 		Address:       found.Delivery.Address,
 		Status:        model.DeliveryStatus(found.Delivery.Status.Status),
@@ -148,15 +141,12 @@ func (d *DeliveryController) GetAll(w http.ResponseWriter, r *http.Request) {
 	const op = "control.delivery.GetWithItemsById"
 	sLogger := slog.With("op", op)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	stream, err := d.deliveryClientGRPC.GetAll(ctx, nil)
+	stream, err := d.deliveryClientGRPC.GetAll(r.Context(), nil)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
 	}
-	var listResponse []model.DeliveryResponse
+	var listResponse = make([]model.DeliveryResponse, 0, 100)
 	for {
 		resp, err := stream.Recv()
 		if err == io.EOF {
@@ -169,7 +159,7 @@ func (d *DeliveryController) GetAll(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		items := make([]model.ItemResponse, 0, len(resp.Items))
+		items := make([]model.ItemResponse, len(resp.Items))
 		for i, item := range resp.Items {
 			items[i] = model.ItemResponse{
 				DeliveryID: item.DeliveryId,
@@ -180,7 +170,7 @@ func (d *DeliveryController) GetAll(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		deliveryResp := model.DeliveryResponse{
-			ID:            resp.Delivery.Id,
+			ID:            resp.Delivery.ID,
 			Recipient:     resp.Delivery.Recipient,
 			Address:       resp.Delivery.Address,
 			Status:        model.DeliveryStatus(resp.Delivery.Status.Status),

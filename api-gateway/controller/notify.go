@@ -40,9 +40,7 @@ func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.R
 	const OP = "controller.notify.NotifyController.UpgradeConnection"
 	logger := slog.With("OP", OP)
 
-	id := r.Context().Value(model.UserIdKey)
-	userID, ok := id.(int64)
-
+	userID, ok := model.UserIDFromContext(r.Context())
 	if !ok {
 		logger.Error("user id not found in context")
 		response.Unauthorized("Unauthorized").SendResponse(resp, r)

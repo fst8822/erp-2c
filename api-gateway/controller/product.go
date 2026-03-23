@@ -6,7 +6,6 @@ import (
 	"api-gateway/lib/types"
 	"api-gateway/model"
 	productgrpc "api-gateway/server_grpc/proto/v1/product"
-	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -35,8 +34,6 @@ func NewProductController(
 func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.Save"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	var productToSave model.ProductToSave
 	if err := render.DecodeJSON(r.Body, &productToSave); err != nil {
 		slog.Error("failed parse request body", sl.ErrWithOP(err, op))
@@ -49,14 +46,14 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 		response.ValidationError(err).SendResponse(w, r)
 		return
 	}
-
-	saved, err := p.productClientGRPC.Save(ctx, &productgrpc.ProductToSave{
+	productToSend := &productgrpc.ProductToSave{
 		ProductName:  productToSave.ProductName,
 		ProductGroup: productToSave.ProductGroup,
 		Image:        productToSave.Image,
 		Stock:        productToSave.Stock,
 		Price:        productToSave.Price,
-	})
+	}
+	saved, err := p.productClientGRPC.Save(r.Context(), productToSend)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -75,10 +72,7 @@ func (p *ProductController) Save(w http.ResponseWriter, r *http.Request) {
 func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.GetAll"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	stream, err := p.productClientGRPC.GetAll(ctx, nil)
+	stream, err := p.productClientGRPC.GetAll(r.Context(), nil)
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -111,9 +105,6 @@ func (p *ProductController) GetAll(w http.ResponseWriter, r *http.Request) {
 func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.GetWithItemsById"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	param := chi.URLParam(r, "id")
 	productId, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
@@ -122,7 +113,7 @@ func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := p.productClientGRPC.GetById(ctx, &productgrpc.RequestProductID{Id: productId})
+	found, err := p.productClientGRPC.GetById(r.Context(), &productgrpc.RequestProductID{Id: productId})
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -141,9 +132,6 @@ func (p *ProductController) GetById(w http.ResponseWriter, r *http.Request) {
 func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.GetByName"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	productName := chi.URLParam(r, "name")
 	if strings.TrimSpace(productName) == "" {
 		slog.Error("Path variable is empty", slog.StringValue(productName), slog.StringValue(op))
@@ -151,7 +139,7 @@ func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, err := p.productClientGRPC.GetByName(ctx, &productgrpc.RequestProductName{Name: productName})
+	found, err := p.productClientGRPC.GetByName(r.Context(), &productgrpc.RequestProductName{Name: productName})
 	if err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
@@ -170,9 +158,6 @@ func (p *ProductController) GetByName(w http.ResponseWriter, r *http.Request) {
 func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.UpdateById"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	Param := chi.URLParam(r, "id")
 	productId, err := strconv.ParseInt(Param, 10, 64)
 	if err != nil {
@@ -190,7 +175,7 @@ func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestUpdate := &productgrpc.UpdateProductByRequestID{
-		ProductID: productId,
+		ProductId: productId,
 		ProductToUpdate: &productgrpc.ProductUpdate{
 			ProductName:  *productToUpdate.ProductName,
 			ProductGroup: *productToUpdate.ProductGroup,
@@ -199,7 +184,7 @@ func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 			Price:        *productToUpdate.Price,
 		},
 	}
-	if _, err := p.productClientGRPC.UpdateById(ctx, requestUpdate); err != nil {
+	if _, err := p.productClientGRPC.UpdateById(r.Context(), requestUpdate); err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
 	}
@@ -209,9 +194,6 @@ func (p *ProductController) UpdateById(w http.ResponseWriter, r *http.Request) {
 func (p *ProductController) DeleteById(w http.ResponseWriter, r *http.Request) {
 	const op = "control.product.DeleteById"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	param := chi.URLParam(r, "id")
 	productId, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
@@ -220,7 +202,7 @@ func (p *ProductController) DeleteById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := p.productClientGRPC.DeleteById(ctx, &productgrpc.RequestProductID{Id: productId}); err != nil {
+	if _, err := p.productClientGRPC.DeleteById(r.Context(), &productgrpc.RequestProductID{Id: productId}); err != nil {
 		types.HandleError(err).SendResponse(w, r)
 		return
 	}

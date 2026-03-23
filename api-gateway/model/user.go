@@ -1,12 +1,5 @@
 package model
 
-type ContextKey string
-
-const (
-	UserIdKey ContextKey = "id"
-	UserRole  ContextKey = "role"
-)
-
 type SignUp struct {
 	FirstName string `json:"first_name" validate:"required"`
 	Email     string `json:"email" validate:"required,email"`

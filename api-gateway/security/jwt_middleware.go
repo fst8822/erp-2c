@@ -3,7 +3,6 @@ package security
 import (
 	"api-gateway/lib/response"
 	"api-gateway/model"
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -50,10 +49,9 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			response.Unauthorized("Invalid token: user role not found").SendResponse(w, r)
 			return
 		}
+		ctxNew := model.SetUserIDContext(r.Context(), id)
+		ctxNew = model.SetUserRoleContext(ctxNew, role)
 
-		ctx := context.WithValue(r.Context(), model.UserIdKey, id)
-		ctx = context.WithValue(ctx, model.UserRole, role)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.WithContext(ctxNew))
 	})
 }

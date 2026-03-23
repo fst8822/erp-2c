@@ -4,12 +4,18 @@ import (
 	"api-gateway/lib/observability/app_metrics"
 	"api-gateway/lib/sl"
 	"api-gateway/model"
+	pb "api-gateway/server_grpc/proto/v1/notify"
 	"context"
+	"io"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/exp/slog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type NotifyService struct {
@@ -17,6 +23,7 @@ type NotifyService struct {
 	clients map[int64]*model.ClientWS
 	done    chan struct{}
 	wg      sync.WaitGroup
+	pb.UnimplementedNotifyServiceServer
 }
 
 func NewNotifyService() *NotifyService {
@@ -77,26 +84,54 @@ func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
 	}()
 }
 
-func (n *NotifyService) SendNotify(notification model.Notification) {
+func (n *NotifyService) SendNotify(stream grpc.ClientStreamingServer[pb.Notification, emptypb.Empty]) error {
 	const OP = "services.use_cases.notify.NotifyService.SendNotify"
-	log := slog.With("OP", OP, "UserID", notification.UserID)
+	log := slog.With("OP", OP)
 
-	n.mu.RLock()
-	clientWS, ok := n.clients[notification.UserID]
-	n.mu.RUnlock()
+	var notifications []model.Notification
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			log.Info("stream close", sl.Err(err))
+			err := stream.SendAndClose(nil)
+			if err != nil {
+				log.Error("Error close stream", sl.Err(err))
+			}
+			break
+		}
+		if err != nil {
+			log.Error("failed get response from stream", sl.Err(err))
+			return status.Error(codes.Internal, err.Error())
+		}
 
-	if !ok {
-		slog.Error("Websocket is already close")
-		return
+		notification := model.Notification{
+			DeliveryId: resp.DeliveryId,
+			Status:     model.DeliveryStatus(resp.Status),
+			CreatedAt:  resp.CreatedAt.AsTime(),
+			UserID:     resp.UserId,
+		}
+		notifications = append(notifications, notification)
 	}
 
-	log.Info("Begin write notification in notifications")
-	select {
-	case clientWS.Cn <- notification:
-	default:
-		log.Info("client channel full, dropping notification", slog.Any("notification", notification))
+	for _, notification := range notifications {
+		n.mu.RLock()
+		clientWS, ok := n.clients[notification.UserID]
+		n.mu.RUnlock()
+
+		if !ok {
+			slog.Error("Websocket is already close")
+			return nil
+		}
+
+		log.Info("Begin write notification in notifications")
+		select {
+		case clientWS.Cn <- notification:
+		default:
+			log.Info("client channel full, dropping notification", slog.Any("notification", notification))
+		}
+		log.Info("End write notification in notifications channel")
 	}
-	log.Info("End write notification in notifications channel")
+	return nil
 }
 
 func (n *NotifyService) AddClient(client *model.ClientWS) {

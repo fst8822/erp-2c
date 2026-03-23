@@ -2,33 +2,34 @@ package types
 
 import (
 	"api-gateway/lib/response"
-	"errors"
+
+	"google.golang.org/grpc/codes"
+	status2 "google.golang.org/grpc/status"
 )
 
 func HandleError(err error) response.Response {
-	appErr := &AppErr{}
-	if !errors.As(err, &appErr) {
+	status, ok := status2.FromError(err)
+	if !ok {
 		return response.InternalServerError()
 	}
-	switch err := appErr.Unwrap(); {
-	case errors.Is(err, ErrNotFound):
-		return response.NotFound(appErr.Message)
-	case errors.Is(err, ErrAlreadyExist):
-		return response.AlreadyExist(appErr.Message)
-	case errors.Is(err, ErrPasswordHash):
+
+	switch status.Code() {
+	case codes.NotFound:
+		return response.NotFound(status.Message())
+	case codes.AlreadyExists:
+		return response.AlreadyExist(status.Message())
+	case codes.PermissionDenied:
+		return response.Forbidden(status.Message())
+	case codes.Unauthenticated:
+		return response.Unauthorized(status.Message())
+	case codes.Internal:
 		return response.InternalServerError()
-	case errors.Is(err, ErrForbidden):
-		return response.Forbidden(appErr.Message)
-	case errors.Is(err, ErrBadRequest):
-		return response.BadRequest(appErr.Message)
-	case errors.Is(err, ErrUnauthorized):
-		return response.Unauthorized(appErr.Message)
-	case errors.Is(err, ErrDatabaseTimeout):
+	case codes.InvalidArgument:
+		return response.BadRequest(status.Message())
+	case codes.Aborted:
 		return response.InternalServerError()
-	case errors.Is(err, ErrInspectedSQL):
+	case codes.Unknown:
 		return response.InternalServerError()
-	case errors.Is(err, ErrNoFieldsUpdate):
-		return response.BadRequest(appErr.Message)
 	default:
 		return response.InternalServerError()
 	}

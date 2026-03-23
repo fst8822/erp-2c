@@ -4,7 +4,7 @@ import (
 	"api-gateway/config"
 	"api-gateway/controller"
 	"api-gateway/lib/sl"
-	"api-gateway/server_grpc"
+	"api-gateway/server_grpc/interceptors_grpc"
 	deliverygrpc "api-gateway/server_grpc/proto/v1/delivery"
 	notifygrpc "api-gateway/server_grpc/proto/v1/notify"
 	productgrpc "api-gateway/server_grpc/proto/v1/product"
@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	forceShutdownTime = 5
+	forceShutdownTime = 5 * time.Second
 )
 
 func main() {
@@ -59,20 +59,32 @@ func main() {
 		return
 	}
 
-	les, err := net.Listen("tcp", "localhost:50051")
+	les, err := net.Listen("tcp", "localhost:50052")
 	if err != nil {
-		slog.Error("Failed to lister", err)
+		slog.Error("Service api-gateway: Failed to lister", err)
+		return
 	}
 
-	s := grpc.NewServer()
-	notifygrpc.RegisterNotifyServiceServer(s, &server_grpc.NotifyGRPCServer{})
+	s := grpc.NewServer(
+	//grpc.StreamInterceptor(interceptors_grpc.AuthServerInterceptorStream),
+	)
+	notifygrpc.RegisterNotifyServiceServer(s, &use_cases.NotifyService{})
 
+	go func() {
+
+		slog.Info("Service api-gateway: Start server grpc", slog.String("tcp", "localhost:50052"))
+		if err := s.Serve(les); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			slog.Error("Failed to grpc Serve", slog.Any("error", err.Error()))
+		}
+	}()
 	conn, err := grpc.NewClient(
 		"localhost:50051",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(interceptors_grpc.TokenInterceptorUnary()),
+		grpc.WithStreamInterceptor(interceptors_grpc.TokenInterceptorStream()),
 	)
 	if err != nil {
-		slog.Error("не удалось подключиться", err)
+		slog.Error("Service api-gateway: Unable to connect grpc client", err)
 	}
 	defer conn.Close()
 
@@ -98,21 +110,11 @@ func main() {
 		WriteTimeout: cfg.WriteTimeout,
 		IdleTimeout:  cfg.IdleTimeout,
 	}
-	serverHTTPErrCh := make(chan error, 1)
-	serverGRPCErrCh := make(chan error, 1)
+
 	go func() {
-		slog.Info("Start server http", slog.String("address", cfg.HTTPAddress))
+		slog.Info("Service api-gateway: Start server http", slog.String("address", cfg.HTTPAddress))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("Failed to start server", slog.Any("error", err.Error()))
-			serverHTTPErrCh <- err
-		}
-		close(serverHTTPErrCh)
-	}()
-	go func() {
-		slog.Info("Start server grpc", slog.String("tcp", "localhost:50052"))
-		if err := s.Serve(les); !errors.Is(err, grpc.ErrServerStopped) {
-			slog.Error("Failed to grpc Serve", slog.Any("error", err.Error()))
-			serverGRPCErrCh <- err
+			slog.Error("Service api-gateway: Failed to start server", slog.Any("error", err.Error()))
 		}
 	}()
 
@@ -120,36 +122,30 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	select {
-	case err = <-serverHTTPErrCh:
-		slog.Info("Server HTTP error, initiating shutdown", sl.Err(err))
-	case err = <-serverGRPCErrCh:
-		slog.Info("Server GRPC error, initiating shutdown", sl.Err(err))
 	case <-stop:
 		slog.Info("Shutdown signal is received")
 	case <-ctx.Done():
 		slog.Info("Context cancelled")
 	}
+	slog.Info("Starting graceful shutdown")
 
 	done := make(chan struct{})
 	go func() {
+		slog.Info("Start Server GRPC shutdown")
 		s.GracefulStop()
 		close(done)
+		slog.Info("End Server GRPC shutdown")
 	}()
 
-	go func() {
-		select {
-		case <-done:
-			slog.Info("GRPC Server stopped gracefully")
-		case <-time.After(forceShutdownTime):
-			s.Stop()
-			slog.Info("GRPC Server Close Force ")
-		}
-	}()
-
-	slog.Info("Starting graceful shutdown")
+	select {
+	case <-done:
+		slog.Info("GRPC Server stopped gracefully")
+	case <-time.After(forceShutdownTime):
+		s.Stop()
+		slog.Info("GRPC Server Close Force ")
+	}
 	ctxCancel()
 
-	slog.Info("Send signal done graceful is successful")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
