@@ -182,7 +182,6 @@ func (d *DeliveryGRPCServer) GetAll(
 	empty *emptypb.Empty, stream grpc.ServerStreamingServer[servergrpc.DeliveryItemsDomain]) error {
 	const op = " delivery-service.server_grpc.service.delivery.GetAll"
 
-	//todo get userID from context
 	userID, ok := model.UserIDFromContext(stream.Context())
 	if !ok {
 		slog.Error("failed get user from context", slog.Int64("userID", userID))
@@ -229,6 +228,7 @@ func (d *DeliveryGRPCServer) GetAll(
 	return nil
 }
 
+// UpdateById todo в разработке
 func (d *DeliveryGRPCServer) UpdateById(
 	ctx context.Context, req *servergrpc.UpdateStatus) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateById not implemented")

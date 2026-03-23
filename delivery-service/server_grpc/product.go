@@ -23,7 +23,6 @@ type productServiceInt interface {
 	DeleteById(productId int64) error
 }
 
-// ProductGRPCServer todo add generic execute error
 type ProductGRPCServer struct {
 	servergrpc.UnimplementedProductServiceServer
 	productServer productServiceInt

@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// HandleError todo в разработке
 func HandleError(err error) error {
 	appErr := &AppErr{}
 	if !errors.As(err, &appErr) {
