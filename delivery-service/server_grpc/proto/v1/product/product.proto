@@ -20,7 +20,7 @@
   }
 
   message UpdateProductByRequestID {
-    int64 productID = 1;
+    int64 product_id = 1;
     ProductUpdate productToUpdate = 2;
   }
 
@@ -42,10 +42,10 @@
   }
 
   service ProductService {
-   rpc  Save(ProductToSave) returns (ProductDomain);
-   rpc  GetById(RequestProductID) returns (ProductDomain);
-   rpc  GetByName(RequestProductName) returns (ProductDomain);
-   rpc  GetAll(google.protobuf.Empty) returns (stream ProductDomain);
-   rpc  UpdateById(UpdateProductByRequestID) returns (google.protobuf.Empty);
-   rpc  DeleteById(RequestProductID) returns (google.protobuf.Empty);
+    rpc  Save(ProductToSave) returns (ProductDomain);
+    rpc  GetById(RequestProductID) returns (ProductDomain);
+    rpc  GetByName(RequestProductName) returns (ProductDomain);
+    rpc  GetAll(google.protobuf.Empty) returns (stream ProductDomain);
+    rpc  UpdateById(UpdateProductByRequestID) returns (google.protobuf.Empty);
+    rpc  DeleteById(RequestProductID) returns (google.protobuf.Empty);
   }

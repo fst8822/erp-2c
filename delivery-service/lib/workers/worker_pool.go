@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -194,14 +195,16 @@ func (w *WorkerPool) updateDBItem() {
 }
 
 func (w *WorkerPool) sendToNotification(ctx context.Context, ch <-chan model.DeliveryDB) {
-	stream, err := w.notify.SendNotify(ctx)
+	const op = "lib.workers.worker_pool.sendToNotification"
+	slogger := slog.With("op", op)
+
+	stream, err := w.notify.SendNotify(ctx, grpc.WaitForReady(true))
 	if err != nil {
-		slog.Error("Failed get client grpc stream", slog.Any("err", err))
+		slogger.Error("Failed get client grpc stream",
+			sl.ErrWithOP(err, op))
 		return
 	}
-	defer stream.CloseSend()
-
-	//todo when is close, it read all message
+	//todo when stream is close, it send all message
 	for it := range ch {
 		notification := clientrgrpc.Notification{
 			DeliveryId: it.ID,
@@ -214,9 +217,14 @@ func (w *WorkerPool) sendToNotification(ctx context.Context, ch <-chan model.Del
 			slog.Error("failed to send notification",
 				slog.Int64("deliveryId", it.ID),
 				slog.String("status", string(it.Status)),
-				err)
+				sl.ErrWithOP(err, op))
 		} else {
 			slog.Info("Notification sent successfully", slog.Int64("deliveryId", it.ID))
+		}
+		_, err := stream.CloseAndRecv()
+		if err != nil {
+			slog.Error("failed Close And Recv notification stream",
+				sl.ErrWithOP(err, op))
 		}
 	}
 }

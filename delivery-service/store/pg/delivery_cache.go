@@ -9,7 +9,6 @@ import (
 
 type CacheInt interface {
 	Get(key int64) (any, bool)
-	GetAll() []any
 	Add(key int64, value any)
 	DeleteByKey(key int64)
 	DeleteByKeys(keys []int64)
@@ -53,36 +52,11 @@ func (c *DeliveryCache) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (model.D
 	return deliveryWithItemsDB, nil
 }
 
-// GetAll todo переделать
 func (c *DeliveryCache) GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error) {
-	deliveries := make([]model.DeliveryDB, 100)
-	itemsDB := make([]model.ItemsDB, 100)
-	isInterrupt := false
-
-	if all := c.cache.GetAll(); len(all) > 0 {
-		for _, v := range all {
-			it, ok2 := v.(model.DeliveryWithItemsDB)
-			if !ok2 {
-				isInterrupt = true
-				break
-			}
-			deliveries = append(deliveries, it.DeliveryDB)
-			itemsDB = append(itemsDB, it.DeliveryItemsDB...)
-		}
-		if !isInterrupt {
-			return &model.DeliverListDB{
-				DeliveriesDB: deliveries,
-				ItemsDB:      itemsDB,
-			}, nil
-		}
-	}
-
 	deliverListDB, err := c.deliveryRepo.GetAll(tx)
 	if err != nil {
 		return nil, err
 	}
-	c.addList(deliverListDB)
-
 	return deliverListDB, nil
 }
 

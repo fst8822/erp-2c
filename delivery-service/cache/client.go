@@ -23,20 +23,6 @@ func NewMapCache(ctx context.Context, ttl time.Duration) *MapCache {
 	return m
 }
 
-// todo нужна ли пагинация
-func (c *MapCache) GetAll() []any {
-	res := make([]any, 0, 100)
-
-	c.data.Range(func(key any, value any) bool {
-		if ic, ok := value.(itemCache); ok {
-			res = append(res, ic.value)
-			return true
-		}
-		return false
-	})
-	return res
-}
-
 func (c *MapCache) Get(key int64) (any, bool) {
 	vAny, ok := c.data.Load(key)
 	var zero any

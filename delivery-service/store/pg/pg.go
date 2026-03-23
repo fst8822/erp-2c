@@ -32,7 +32,7 @@ func Dial() (*DB, error) {
 	return &DB{db}, nil
 }
 
-func checkDBFieldsReturnPgUrl(cfg *config.DBConfig) (string, error) {
+func checkDBFieldsReturnPgUrl(cfg *config.Config) (string, error) {
 	const op = "store.pg.checkDBFieldsReturnPgUrl"
 
 	if cfg.DriverName == "" {

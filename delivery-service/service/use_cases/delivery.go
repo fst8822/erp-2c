@@ -57,7 +57,7 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 		idsToCheck = append(idsToCheck, item.ProductID)
 	}
 	err := d.inTransaction.InTransaction(ctx, func(tx *sqlx.Tx) error {
-		foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck) // todo важно
+		foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck)
 		if err != nil {
 			sLogger.Error("failed check existing products", sl.Err(err))
 			return err
@@ -85,7 +85,6 @@ func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.Deliv
 	if err != nil {
 		return nil, err
 	}
-	//todo add app_metrics
 	app_metrics.TotalCountDelivery.Inc()
 	return &delivery, nil
 }

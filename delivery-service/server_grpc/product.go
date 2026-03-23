@@ -3,6 +3,7 @@ package server_grpc
 import (
 	"context"
 	"delivery-service/lib/sl"
+	"delivery-service/lib/types"
 	"delivery-service/model"
 	servergrpc "delivery-service/server_grpc/proto/v1/product"
 
@@ -47,18 +48,17 @@ func (p *ProductGRPCServer) Save(
 	if err != nil {
 		slog.Error("failed save product",
 			slog.String("product name", productToSave.ProductName), sl.ErrWithOP(err, op))
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, types.HandleError(err)
 	}
 
-	productToResponse := &servergrpc.ProductDomain{
+	return &servergrpc.ProductDomain{
 		Id:           saved.Id,
 		ProductName:  saved.ProductName,
 		ProductGroup: saved.ProductGroup,
 		Image:        saved.Image,
 		Stock:        saved.Stock,
 		Price:        saved.Price,
-	}
-	return productToResponse, nil
+	}, nil
 }
 
 func (p *ProductGRPCServer) GetById(
@@ -68,7 +68,7 @@ func (p *ProductGRPCServer) GetById(
 	found, err := p.productServer.GetById(req.Id)
 	if err != nil {
 		slog.Error("failed to find product", sl.ErrWithOP(err, op))
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, types.HandleError(err)
 	}
 	return &servergrpc.ProductDomain{
 		Id:           found.Id,
@@ -87,7 +87,7 @@ func (p *ProductGRPCServer) GetByName(
 	found, err := p.productServer.GetByName(req.Name)
 	if err != nil {
 		slog.Error("failed to find product", sl.ErrWithOP(err, op))
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, types.HandleError(err)
 	}
 	return &servergrpc.ProductDomain{
 		Id:           found.Id,
@@ -129,6 +129,10 @@ func (p *ProductGRPCServer) UpdateById(
 	ctx context.Context, req *servergrpc.UpdateProductByRequestID) (*emptypb.Empty, error) {
 	const op = " delivery-service.server_grpc.service.product.UpdateById"
 
+	if req.ProductToUpdate == nil {
+		slog.Info("request body to update is empty")
+		return nil, status.Error(codes.InvalidArgument, "request body is empty")
+	}
 	productToUpdate := model.ProductUpdate{
 		ProductName:  &req.ProductToUpdate.ProductName,
 		ProductGroup: &req.ProductToUpdate.ProductGroup,
@@ -136,21 +140,22 @@ func (p *ProductGRPCServer) UpdateById(
 		Stock:        &req.ProductToUpdate.Stock,
 		Price:        &req.ProductToUpdate.Price,
 	}
-	err := p.productServer.UpdateById(req.GetProductID(), productToUpdate)
+	err := p.productServer.UpdateById(req.GetProductId(), productToUpdate)
 	if err != nil {
 		slog.Error("failed to update product", sl.ErrWithOP(err, op))
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, types.HandleError(err)
 	}
 	return nil, nil
 }
 
-func (p *ProductGRPCServer) DeleteById(ctx context.Context, req *servergrpc.RequestProductID) (*emptypb.Empty, error) {
+func (p *ProductGRPCServer) DeleteById(
+	ctx context.Context, req *servergrpc.RequestProductID) (*emptypb.Empty, error) {
 	const op = " delivery-service.server_grpc.service.product.DeleteById"
 
 	err := p.productServer.DeleteById(req.GetId())
 	if err != nil {
 		slog.Error("failed to DeleteById product", sl.ErrWithOP(err, op))
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, types.HandleError(err)
 	}
 	return nil, nil
 }
