@@ -1,0 +1,20 @@
+  syntax = "proto3";
+  option go_package = "erp-2c/api-gateway/server_grpc";
+
+  import "google/protobuf/timestamp.proto";
+  import "google/protobuf/empty.proto";
+
+  message Notification {
+    int64 delivery_id = 1;
+    string Status = 2;
+    google.protobuf.Timestamp createdAt = 3;
+    int64 user_id = 4;
+  }
+
+  service NotifyService {
+     rpc SendNotify(stream Notification) returns (google.protobuf.Empty);
+  }
+
+
+
+

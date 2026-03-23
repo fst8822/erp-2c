@@ -298,3 +298,636 @@ render.Bind(r, &req)
 2. req.Bind(r)               ← вызывает твой метод валидации
     ↓
 return error (или nil)
+
+
+delivery
+func DeliveryFromDTO(dto DeliveryToSave) (*Delivery, error) {
+	items := make([]DeliveryItem, 0, len(dto.Items))
+
+	for _, i := range dto.Items {
+		item, err := NewDeliveryItem(i.ProductID, i.ItemPrice, i.Quantity)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return NewDelivery(items, dto.RecipientGoods, dto.Address)
+}
+
+func (d *Delivery) ChangeStatus(status DeliveryStatus) error {
+	if err := status.IsValid(); err != nil {
+		return err
+	}
+
+	// пример бизнес-правила
+	if d.status == StatusCancelled {
+		return ErrDeliveryAlreadyCancelled
+	}
+
+	d.status = status
+	return nil
+}
+
+func NewDelivery(
+	items []DeliveryItem,
+	recipientGoods string,
+	address string,
+) (*Delivery, error) {
+
+	if len(items) == 0 {
+		return nil, ErrEmptyDeliveryItems
+	}
+	if recipientGoods == "" {
+		return nil, ErrEmptyRecipient
+	}
+	if address == "" {
+		return nil, ErrEmptyAddress
+	}
+
+	d := &Delivery{
+		items:          items,
+		recipientGoods: recipientGoods,
+		address:        address,
+		status:         StatusCreated,
+		createdAt:      time.Now(),
+	}
+
+	d.recalculateTotal()
+
+	return d, nil
+}
+
+package model
+
+type DeliveryItem struct {
+	ProductID int64
+	ItemPrice int64
+	Quantity  int64
+}
+
+func NewDeliveryItem(
+	productID int64,
+	itemPrice int64,
+	quantity int64,
+) (DeliveryItem, error) {
+
+	if productID <= 0 {
+		return DeliveryItem{}, ErrInvalidProduct
+	}
+	if itemPrice <= 0 {
+		return DeliveryItem{}, ErrInvalidPrice
+	}
+	if quantity <= 0 {
+		return DeliveryItem{}, ErrInvalidQuantity
+	}
+
+	return DeliveryItem{
+		ProductID: productID,
+		ItemPrice: itemPrice,
+		Quantity:  quantity,
+	}, nil
+}
+
+func (i DeliveryItem) Total() int64 {
+	return i.ItemPrice * i.Quantity
+}
+
+package model
+
+import "erp-2c/lib/types"
+
+type DeliveryStatus string
+
+const (
+	StatusCreated   DeliveryStatus = "CREATED"
+	StatusAccepted  DeliveryStatus = "ACCEPTED"
+	StatusShipped   DeliveryStatus = "SHIPPED"
+	StatusDelivered DeliveryStatus = "DELIVERED"
+	StatusCancelled DeliveryStatus = "CANCELLED"
+)
+
+func NewDeliveryStatus(s string) (DeliveryStatus, error) {
+	status := DeliveryStatus(s)
+	if err := status.IsValid(); err != nil {
+		return "", err
+	}
+	return status, nil
+}
+
+func (s DeliveryStatus) IsValid() error {
+	switch s {
+	case StatusCreated, StatusAccepted, StatusShipped, StatusDelivered, StatusCancelled:
+		return nil
+	default:
+		return types.NewAppErr(string(s), types.ErrUnknownStatus)
+	}
+}
+
+///update
+package model
+
+import "time"
+
+// ====================
+// Доменные модели
+// ====================
+type DeliveryItem struct {
+	Product   ProductDomain
+	ItemPrice int64
+	Quantity  int64
+}
+
+func (i *DeliveryItem) TotalAmount() int64 {
+	return i.ItemPrice * i.Quantity
+}
+
+type DeliveryItemDomain struct {
+	Id             int64
+	DeliveryItems  []DeliveryItem
+	RecipientGoods string
+	Address        string
+	StatusDelivery DeliveryStatus
+	CreatedAt      time.Time
+	TotalAmount    int64
+}
+
+// ====================
+// Методы для работы с товарами
+// ====================
+
+// Добавление товара
+func (d *DeliveryItemDomain) AddItem(item DeliveryItem) {
+	d.DeliveryItems = append(d.DeliveryItems, item)
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// Удаление товара по индексу
+func (d *DeliveryItemDomain) RemoveItem(index int) {
+	if index < 0 || index >= len(d.DeliveryItems) {
+		return
+	}
+	d.DeliveryItems = append(d.DeliveryItems[:index], d.DeliveryItems[index+1:]...)
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// Обновление количества/цены товара по индексу
+func (d *DeliveryItemDomain) UpdateItem(index int, item DeliveryItem) {
+	if index < 0 || index >= len(d.DeliveryItems) {
+		return
+	}
+	d.DeliveryItems[index] = item
+	d.updateTotal() // автоматически синхронизируем TotalAmount
+}
+
+// ====================
+// Внутренний метод для синхронизации суммы
+// ====================
+func (d *DeliveryItemDomain) updateTotal() {
+	var total int64
+	for _, item := range d.DeliveryItems {
+		total += item.TotalAmount()
+	}
+	d.TotalAmount = total
+}
+
+// ❌ Ошибка 1: Двойной Rollback
+defer tx.Rollback()
+if err := tx.Commit(); err != nil {
+    return err  // Rollback вызовется снова!
+}
+
+// ❌ Ошибка 2: Игнорируем ошибку Rollback
+defer tx.Rollback()  // Ошибка может быть, но мы ее игнорируем
+
+// ❌ Ошибка 3: Rollback после успешного Commit
+if err := tx.Commit(); err != nil {
+    return err
+}
+defer tx.Rollback()  // Слишком поздно!
+
+
+committed := false
+
+defer func() {
+    if committed {
+        return
+    }
+
+    if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+        sLogger.Error("rollback failed", sl.Err(err))
+    } else {
+        sLogger.Debug("transaction rolled back")
+    }
+}()
+
+if err := tx.Commit(); err != nil {
+    return err
+}
+committed = true
+
+
+_, err := tx.CopyFrom(
+	ctx,
+	pgx.Identifier{"delivery_items"},
+	[]string{"delivery_id", "product_id", "quantity", "item_price"},
+	pgx.CopyFromRows(
+		deliveryItemsToCopyRows(delivery.ID, delivery.DeliveryItemsDB),
+	),
+)
+if err != nil {
+	return nil, types.NewAppErr(
+		"failed to copy delivery items",
+		errors.Join(err, types.ErrInspectedSQL),
+	)
+}
+
+
+**********
+BatchSize
+UPDATE delivery d
+SET status = u.status
+FROM unnest($1::int[], $2::text[]) AS u(id, status)
+WHERE d.id = u.id;
+
+ids := make([]int, 0, len(deliveries))
+statuses := make([]string, 0, len(deliveries))
+
+for _, d := range deliveries {
+	ids = append(ids, d.ID)
+	statuses = append(statuses, d.Status)
+}
+
+_, err := d.db.Exec(query, pq.Array(ids), pq.Array(statuses))
+return err
+
+**
+UPDATE delivery
+SET status = $1
+WHERE id = ANY($2::bigint[]);
+
+ids := make([]int64, 0, len(deliveries))
+for _, d := range deliveries {
+	ids = append(ids, d.ID)
+}
+
+_, err := d.db.Exec(query, status, pq.Array(ids))
+
+
+***
+const batchSize = 500 // или 1000–5000, зависит от БД и объёма данных
+
+var valueStrings []string
+var valueArgs []interface{}
+
+for i, item := range items {
+    valueStrings = append(valueStrings, "(?, ?, ?, ?)")
+    valueArgs = append(valueArgs, item.ID, item.Status, item.CreatedAt, item.Payload)
+
+    if len(valueStrings) == batchSize || i == len(items)-1 {
+        // Формируем запрос
+        stmt := fmt.Sprintf(
+            "INSERT INTO deliveries (id, status, created_at, payload) VALUES %s",
+            strings.Join(valueStrings, ","),
+        )
+
+        _, err := db.Exec(stmt, valueArgs...)
+        if err != nil {
+            // обработка ошибки
+        }
+
+        // Сбрасываем для следующего батча
+        valueStrings = valueStrings[:0]
+        valueArgs = valueArgs[:0]
+    }
+}
+
+const batchSize = 500 // 100–1000, зависит от БД и количества полей
+
+for i := 0; i < len(deliveries); i += batchSize {
+    end := i + batchSize
+    if end > len(deliveries) {
+        end = len(deliveries)
+    }
+
+    batch := deliveries[i:end]
+
+    // Собираем placeholders и значения
+    var valueStrings []string
+    var valueArgs []interface{}
+
+    for _, d := range batch {
+        valueStrings = append(valueStrings, "(?, ?, ?)")
+        valueArgs = append(valueArgs, d.ID, d.Status, d.CreatedAt)
+    }
+
+    stmt := fmt.Sprintf(
+        "INSERT INTO deliveries (id, status, created_at) VALUES %s",
+        strings.Join(valueStrings, ","),
+    )
+
+    _, err := db.Exec(stmt, valueArgs...)
+    if err != nil {
+        // обработка ошибки
+    }
+}
+
+let socket = new WebSocket(ws://localhost:8080/ws)
+socket.onmessage = (event) => {console.log("received: ", event.data)}
+socket.send("Salam")
+
+
+func (n *NotifyService) shutdown() {
+	n.RWMutex.Lock()
+	defer n.RWMutex.Unlock()
+
+	for userID, conn := range n.clients {
+		conn.WriteMessage(websocket.CloseMessage, nil)
+		conn.Close()
+		delete(n.clients, userID)
+	}
+	close(n.notifications)
+}
+
+
+func (s *NotifyService) Subscribe(ctx context.Context, conn *websocket.Conn, id int64) {
+    ch := make(chan model.Notification, 10) // буфер чтобы не блокировать воркер
+    s.addClient(id, ch)
+
+    defer func() {
+        conn.Close()
+        s.removeClient(id)
+    }()
+
+    ticker := time.NewTicker(30 * time.Second)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case notification := <-ch:
+            if err := conn.WriteJSON(notification); err != nil {
+                return
+            }
+        case <-ticker.C:
+            if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+                return
+            }
+        }
+    }
+}
+
+**
+if err := client.SetWriteDeadline(time.Now().Add(writeLimit)); err != nil {
+				log.Error("error set WriteDeadline", slog.Int64("userid", userId), sl.Err(err))
+				return
+			}
+
+func (n *NotifyService) Subscribe(ctx context.Context, client *model.ClientWS) {
+	const OP = "services.use_cases.notify.Subscribe"
+	log := slog.With("OP", OP)
+
+	defer func() {
+		n.RemoveClient(client.UserID)
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is don, exit from subscribe")
+			if err := client.Conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
+				log.Error("Connection is closed", sl.Err(err))
+			}
+			return
+
+		case notification, ok := <-client.Cn:
+			if !ok {
+				if err := client.Conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
+					log.Error("Connection is closed", sl.Err(err))
+				}
+				return
+			}
+
+			log.Info("Send message to client", slog.AnyValue(notification))
+			if err := client.Conn.WriteJSON(notification); err != nil {
+				log.Error("Error send message to client, connection is closed",
+					slog.Int64("userid", client.UserID),
+					sl.Err(err))
+				return
+			}
+		}
+	}
+}
+
+docker run -d --name prometheus -p 9090:9090 prom/prometheus:latest
+docker ps -a | grep prometheus
+
+
+go get github.com/prometheus/client_golang/prometheus
+go get github.com/prometheus/client_golang/prometheus/promhttp
+github.com/prometheus/client_golang/prometheus/promauto
+router.Handle("/metrics", promhttp.Handler())
+r.Handle("/metrics", promhttp.Handler())
+var (
+    // Счётчик регистраций
+    userRegistrations = promauto.NewCounter(prometheus.CounterOpts{
+        Name: "app_user_registrations_total",
+        Help: "Общее количество новых пользователей",
+    })
+
+    // Датчик активных соединений с БД
+    dbConnections = promauto.NewGauge(prometheus.GaugeOpts{
+        Name: "app_db_connections_active",
+        Help: "Текущее кол-во соединений с базой",
+    })
+)
+Обычно в Prometheus работа с метрикой состоит из двух шагов: Создание объекта метрики.
+Регистрация его в системе (prometheus.MustRegister), чтобы библиотека знала,
+что эту метрику нужно показывать в /metrics.
+Пакет promauto делает эти два шага одновременно.
+
+app_orders_created_total — просто число всех заказов за всё время.
+rate(app_orders_created_total[5m]) — скорость заказов. Покажет, сколько заказов в
+секунду падает прямо сейчас (усредненно за 5 минут). Это самый важный график для бизнеса.
+sum(app_orders_by_category_total) by (category) — покажет, какая категория самая популярная.
+
+func init() {
+	err := prometheus.Register(collectors.NewGoCollector())
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: GoCollector", sl.Err(err))
+	}
+	err = prometheus.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: ProcessCollector", sl.Err(err))
+	}
+	err = prometheus.Register(HttpReqTotal)
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: httpReqTotal", sl.Err(err))
+	}
+	err = prometheus.Register(HttpReqDuration)
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: httpReqDuration", sl.Err(err))
+	}
+	err = prometheus.Register(WebsocketActiveConn)
+	if err != nil {
+		slog.Error("Error register Prometheus Collector: WebsocketActiveConn", sl.Err(err))
+	}
+}
+
+
+****Методы репо
+func (c *DeliveryCache) GetAll(tx *sqlx.Tx) (*model.DeliverListDB, error) {
+	deliveries := make([]model.DeliveryDB, 100)
+	itemsDB := make([]model.ItemsDB, 100)
+	isInterrupt := false
+
+	if all, ok := c.cache.GetAll(); ok {
+		for _, v := range all {
+			it, ok2 := v.(model.DeliveryWithItemsDB)
+			if !ok2 {
+				isInterrupt = true
+				break
+			}
+			deliveries = append(deliveries, it.DeliveryDB)
+			itemsDB = append(itemsDB, it.DeliveryItemsDB...)
+		}
+		if !isInterrupt {
+			return &model.DeliverListDB{
+				DeliveriesDB: deliveries,
+				ItemsDB:      itemsDB,
+			}, nil
+		}
+	}
+
+	deliverListDB, err := c.deliveryRepo.GetAll(tx)
+	if err != nil {
+		return nil, err
+	}
+	c.addList(deliverListDB)
+
+	return deliverListDB, nil
+}
+
+func (c *DeliveryCache) GetWithItemsById(tx *sqlx.Tx, deliveryId int64) (model.DeliveryWithItemsDB, error) {
+	if v, ok := c.cache.Get(deliveryId); ok {
+		if deliveryItems, ok2 := v.(model.DeliveryWithItemsDB); ok2 {
+			return deliveryItems, nil
+		}
+	}
+	deliveryWithItemsDB, err := c.deliveryRepo.GetWithItemsById(tx, deliveryId)
+	if err != nil {
+		return model.DeliveryWithItemsDB{}, err
+	}
+	c.cache.Add(deliveryId, deliveryWithItemsDB)
+
+	return deliveryWithItemsDB, nil
+}
+
+func (c *DeliveryCache) SaveWithItems(
+	tx *sqlx.Tx, deliveryWithItems model.DeliveryWithItemsDB) (*model.DeliveryDB, error) {
+
+	DeliveryDB, err := c.deliveryRepo.SaveWithItems(tx, deliveryWithItems)
+	if err != nil {
+		return nil, err
+	}
+	deliveryWithItems.DeliveryDB.ID = DeliveryDB.ID
+	c.cache.Add(DeliveryDB.ID, deliveryWithItems)
+	return DeliveryDB, nil
+}
+
+func (c *DeliveryCache) GetAllWithItemsByStatus(tx *sqlx.Tx, status model.DeliveryStatus) (*model.DeliverListDB, error) {
+	return c.deliveryRepo.GetAllWithItemsByStatus(tx, status)
+}
+
+func (c *DeliveryCache) LockAndGetDeliveries(status model.DeliveryStatus) ([]model.DeliveryDB, error) {
+	return c.deliveryRepo.LockAndGetDeliveries(status)
+}
+
+func (c *DeliveryCache) UpdateById(tx *sqlx.Tx, deliveryId int64, status model.UpdateStatus) error {
+	c.cache.DeleteByKey(deliveryId)
+	return c.deliveryRepo.UpdateById(tx, deliveryId, status)
+}
+
+func (c *DeliveryCache) DeleteById(tx *sqlx.Tx, deliveryId int64) error {
+	c.cache.DeleteByKey(deliveryId)
+	return c.deliveryRepo.DeleteById(tx, deliveryId)
+}
+
+func (c *DeliveryCache) UpdateStatusById(tx *sqlx.Tx, deliveryId int64, status model.DeliveryStatus) error {
+	c.cache.DeleteByKey(deliveryId)
+	return c.deliveryRepo.UpdateStatusById(tx, deliveryId, status)
+}
+
+func (c *DeliveryCache) UpdateStatusByIds(tx *sqlx.Tx, groups map[model.DeliveryStatus][]int64) error {
+	for _, keys := range groups {
+		c.cache.DeleteByKeys(keys)
+	}
+	return c.deliveryRepo.UpdateStatusByIds(tx, groups)
+}
+
+func (c *DeliveryCache) GetStatusCount(tx *sqlx.Tx) ([]model.StatusCount, error) {
+	return c.deliveryRepo.GetStatusCount(tx)
+}
+
+func (c *DeliveryCache) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+	return c.deliveryRepo.BeginTxx(ctx)
+}
+
+func (c *DeliveryCache) addList(deliverListDB *model.DeliverListDB) {
+	mapItem := make(map[int64][]model.ItemsDB)
+	for _, v := range deliverListDB.ItemsDB {
+		mapItem[v.DeliveryID] = append(mapItem[v.DeliveryID], v)
+	}
+
+	for _, v := range deliverListDB.DeliveriesDB {
+		deliveryWithItemsDB := model.DeliveryWithItemsDB{
+			DeliveryDB:      v,
+			DeliveryItemsDB: mapItem[v.ID],
+		}
+		c.cache.Add(v.ID, deliveryWithItemsDB)
+	}
+}
+
+для теста panici
+func (d *DeliveryService) Save(delivery model.DeliveryItemsDomain) (*model.DeliveryItemsDomain, error) {
+	const op = "service.use_cases.delivery.Save"
+	sLogger := slog.With("op", op)
+	sLogger.Info("Begin save delivery.", slog.Any("delivery", delivery))
+
+	ctx := context.TODO()
+	var deliveryItemsDomain model.DeliveryItemsDomain
+	idsToCheck := make([]int64, 0, len(delivery.Items))
+
+	for _, item := range delivery.Items {
+		idsToCheck = append(idsToCheck, item.ProductID)
+	}
+	err := d.inTransaction.InTransaction(ctx, func(tx *sqlx.Tx) error {
+		foundIds, err := d.productRepo.GetExistIds(tx, idsToCheck) // todo важно
+		if err != nil {
+			sLogger.Error("failed check existing products", sl.Err(err))
+			return err
+		}
+
+		missingIds := findMissingIds(idsToCheck, foundIds)
+		if len(missingIds) > 0 {
+			sLogger.Error("No found product with ids ",
+				slog.Any("missing ids", missingIds))
+
+			return types.NewAppErr(
+				fmt.Sprintf("Products with ids %v not found",
+					missingIds), types.ErrNotFound)
+		}
+		deliveryWithItemsDB := delivery.MapToDBWithItems()
+		saved, err := d.deliveryRepo.SaveWithItems(tx, deliveryWithItemsDB)
+		if err != nil {
+			sLogger.Error("failed save delivery", sl.Err(err))
+			return err
+		}
+		app_metrics.TotalCountDelivery.Inc()
+		slog.Info("Saved delivery", slog.Int64("deliveryId", saved.ID))
+		delivery.ID = saved.ID
+		return nil
+	})
+	return &deliveryItemsDomain, err
+}

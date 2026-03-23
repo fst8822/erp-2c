@@ -1,0 +1,82 @@
+package controller
+
+import (
+	"api-gateway/lib/response"
+	"api-gateway/lib/sl"
+	"api-gateway/lib/types"
+	"api-gateway/model"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
+)
+
+type authServiceInt interface {
+	SignUp(signUp model.SignUp) (*model.UserDomain, error)
+	SignIn(signIn model.SignIn) (string, error)
+}
+
+type AuthController struct {
+	authService authServiceInt
+	validate    *validator.Validate
+}
+
+func NewAuthController(authService authServiceInt, validate *validator.Validate) *AuthController {
+	return &AuthController{
+		authService: authService,
+		validate:    validate,
+	}
+}
+
+func (a *AuthController) SignUp(w http.ResponseWriter, r *http.Request) {
+	const op = "control.auth.SignUp"
+
+	var singUp model.SignUp
+
+	err := render.DecodeJSON(r.Body, &singUp)
+	if err != nil {
+		slog.Error("failed to decode request body", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid request body").SendResponse(w, r)
+		return
+	}
+
+	if err = a.validate.Struct(&singUp); err != nil {
+		slog.Error("failed validate request fields", sl.ErrWithOP(err, op))
+		response.ValidationError(err).SendResponse(w, r)
+		return
+	}
+
+	saved, err := a.authService.SignUp(singUp)
+	if err != nil {
+		types.HandleError(err).SendResponse(w, r)
+		return
+	}
+	response.Created(saved).SendResponse(w, r)
+}
+
+func (a *AuthController) SignIn(w http.ResponseWriter, r *http.Request) {
+	const op = "control.auth.SignIn"
+
+	var signIn model.SignIn
+
+	err := render.DecodeJSON(r.Body, &signIn)
+	if err != nil {
+		slog.Error("failed to decode request body", sl.ErrWithOP(err, op))
+		response.BadRequest("Invalid request body").SendResponse(w, r)
+		return
+	}
+
+	if err := a.validate.Struct(signIn); err != nil {
+		slog.Error("failed validate request fields", sl.ErrWithOP(err, op))
+		response.ValidationError(err).SendResponse(w, r)
+		return
+	}
+
+	token, err := a.authService.SignIn(signIn)
+	if err != nil {
+		types.HandleError(err).SendResponse(w, r)
+		return
+	}
+	response.OK(token).SendResponse(w, r)
+}

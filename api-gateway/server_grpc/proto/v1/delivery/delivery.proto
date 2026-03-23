@@ -1,0 +1,57 @@
+
+syntax = "proto3";
+  option go_package = "erp-2c/delivery-service/server_grpc";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+  service DeliveryService {
+      rpc Save(DeliveryItemsDomain) returns (DeliveryItemsDomain);
+      rpc GetById(RequestDeliveryID) returns (DeliveryItemsDomain);
+      rpc GetByStatus(DeliveryStatus) returns (stream DeliveryItemsDomain);
+      rpc GetAll(google.protobuf.Empty) returns (stream DeliveryItemsDomain);
+      rpc UpdateById(UpdateStatus) returns (google.protobuf.Empty);
+      rpc DeleteById(RequestDeliveryID) returns (google.protobuf.Empty);
+  }
+
+      message RequestDeliveryID {
+          int64 Delivery_id = 1;
+      }
+
+     message RequestDeliveryName {
+          string Delivery_name = 1;
+      }
+
+      message DeliveryStatus {
+        string Status = 1;
+      }
+
+      message DeliverDomain {
+        int64 ID = 1;
+        string Recipient = 2;
+        string Address = 3;
+        DeliveryStatus Status = 4;
+        google.protobuf.Timestamp CreatedAt = 5;
+        int64 User_id = 6;
+        int64 Deliver_amount = 7;
+      }
+
+      message ItemDomain {
+        int64 Delivery_id = 1;
+        int64 Product_id = 2;
+        int64 ItemPrice = 3;
+        int64 Quantity = 4;
+        int64 ItemAmount = 5;
+      }
+
+      message DeliveryItemsDomain {
+        DeliverDomain delivery = 1;
+        repeated  ItemDomain Items = 2;
+      }
+
+      //todo use enum
+      message UpdateStatus {
+        int64 Delivery_id = 1;
+        DeliveryStatus Status = 2;
+      }
+
