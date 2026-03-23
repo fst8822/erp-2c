@@ -6,7 +6,6 @@ import (
 	"api-gateway/lib/sl"
 	"api-gateway/server_grpc/interceptors_grpc"
 	deliverygrpc "api-gateway/server_grpc/proto/v1/delivery"
-	notifygrpc "api-gateway/server_grpc/proto/v1/notify"
 	productgrpc "api-gateway/server_grpc/proto/v1/product"
 	"api-gateway/service/use_cases"
 	"api-gateway/store"
@@ -16,7 +15,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -59,22 +57,6 @@ func main() {
 		return
 	}
 
-	les, err := net.Listen("tcp", "localhost:50052")
-	if err != nil {
-		slog.Error("Service api-gateway: Failed to lister", err)
-		return
-	}
-
-	s := grpc.NewServer()
-	notifygrpc.RegisterNotifyServiceServer(s, &use_cases.NotifyService{})
-
-	go func() {
-
-		slog.Info("Service api-gateway: Start server grpc", slog.String("tcp", "localhost:50052"))
-		if err := s.Serve(les); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
-			slog.Error("Failed to grpc Serve", slog.Any("error", err.Error()))
-		}
-	}()
 	conn, err := grpc.NewClient(
 		"localhost:50051",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -127,21 +109,6 @@ func main() {
 	}
 	slog.Info("Starting graceful shutdown")
 
-	done := make(chan struct{})
-	go func() {
-		slog.Info("Start Server GRPC shutdown")
-		s.GracefulStop()
-		close(done)
-		slog.Info("End Server GRPC shutdown")
-	}()
-
-	select {
-	case <-done:
-		slog.Info("GRPC Server stopped gracefully")
-	case <-time.After(forceShutdownTime):
-		s.Stop()
-		slog.Info("GRPC Server Close Force ")
-	}
 	ctxCancel()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
@@ -154,6 +121,5 @@ func main() {
 		}
 	}
 
-	notifyService.Shutdown()
 	slog.Info("Server shutdown gracefully")
 }
