@@ -65,9 +65,7 @@ func main() {
 		return
 	}
 
-	s := grpc.NewServer(
-	//grpc.StreamInterceptor(interceptors_grpc.AuthServerInterceptorStream),
-	)
+	s := grpc.NewServer()
 	notifygrpc.RegisterNotifyServiceServer(s, &use_cases.NotifyService{})
 
 	go func() {
