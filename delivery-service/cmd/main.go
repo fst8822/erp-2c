@@ -13,7 +13,6 @@ import (
 	"delivery-service/server_grpc/interceptors_grpc"
 	deliverygrpc "delivery-service/server_grpc/proto/v1/delivery"
 	clientrgrpc "delivery-service/server_grpc/proto/v1/notify"
-	productgrpc "delivery-service/server_grpc/proto/v1/product"
 	"delivery-service/service/use_cases"
 	"delivery-service/store/pg"
 	"errors"
@@ -66,14 +65,10 @@ func main() {
 
 	mapCache := cache.NewMapCache(ctx, tTLCache)
 
-	productRepository := pg.NewProductRepository(db.Pg)
-	productService := use_cases.NewProductService(productRepository)
-
 	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
 	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, mapCache)
 	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, productRepository)
 
-	productGRPCServer := server_grpc.NewProductGRPCServer(productService)
 	deliveryGRPCServer := server_grpc.NewDeliveryGRPCServer(deliveryService)
 
 	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
@@ -89,7 +84,6 @@ func main() {
 		grpc.StreamInterceptor(interceptors_grpc.AuthServerInterceptorStream),
 	)
 	deliverygrpc.RegisterDeliveryServiceServer(s, deliveryGRPCServer)
-	productgrpc.RegisterProductServiceServer(s, productGRPCServer)
 
 	go func() {
 		slog.Info("delivery-service: Start server grpc", slog.String("tcp", "localhost:50051"))
