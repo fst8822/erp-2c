@@ -1,9 +1,9 @@
 package use_cases
 
 import (
-	"delivery-service/lib/sl"
-	"delivery-service/model"
 	"log/slog"
+	"product-service/lib/sl"
+	"product-service/model"
 )
 
 type productRepoInt interface {

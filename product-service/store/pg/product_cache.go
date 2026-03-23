@@ -1,10 +1,17 @@
 package pg
 
 import (
-	"delivery-service/model"
+	"product-service/model"
 
 	"github.com/jmoiron/sqlx"
 )
+
+type CacheInt interface {
+	Get(key int64) (any, bool)
+	Add(key int64, value any)
+	DeleteByKey(key int64)
+	DeleteByKeys(keys []int64)
+}
 
 // ProductCache Save todo в разработке
 type ProductCache struct {

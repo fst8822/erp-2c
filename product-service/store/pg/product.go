@@ -3,8 +3,9 @@ package pg
 import (
 	"context"
 	"database/sql"
-	"delivery-service/lib/types"
-	"delivery-service/model"
+	"product-service/lib/types"
+	"product-service/model"
+
 	"errors"
 	"fmt"
 	"strings"

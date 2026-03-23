@@ -2,10 +2,10 @@ package server_grpc
 
 import (
 	"context"
-	"delivery-service/lib/sl"
-	"delivery-service/lib/types"
-	"delivery-service/model"
-	servergrpc "delivery-service/server_grpc/proto/v1/product"
+	"product-service/lib/sl"
+	"product-service/lib/types"
+	"product-service/model"
+	servergrpc "product-service/server_grpc/proto/v1/product"
 
 	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
