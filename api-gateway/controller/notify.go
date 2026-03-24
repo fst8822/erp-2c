@@ -41,7 +41,6 @@ func (n *NotifyController) UpgradeConnection(resp http.ResponseWriter, r *http.R
 		response.Unauthorized("Unauthorized").SendResponse(resp, r)
 		return
 	}
-
 	conn, err := websocketUpgrade.Upgrade(resp, r, nil)
 	if err != nil {
 		logger.Error("Error websocket Upgrade connection", sl.Err(err))

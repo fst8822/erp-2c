@@ -33,6 +33,7 @@ func NewProductGRPCServer(productServer productServiceInt) *ProductGRPCServer {
 	return &ProductGRPCServer{productServer: productServer}
 }
 
+// Save todo need check ctx
 func (p *ProductGRPCServer) Save(
 	ctx context.Context, req *servergrpc.ProductToSave) (*servergrpc.ProductDomain, error) {
 	const op = " delivery-service.server_grpc.service.product.Save"
@@ -125,8 +126,16 @@ func (p *ProductGRPCServer) GetAll(
 	return nil
 }
 
-func (p *ProductGRPCServer) GetExistIds(productIds []int64) ([]int64, error) {
-	return p.productServer.GetExistIds(productIds)
+func (p *ProductGRPCServer) GetExistIds(
+	ctx context.Context, productIDs *servergrpc.ListProductIDs) (*servergrpc.ListProductIDs, error) {
+	const op = " delivery-service.server_grpc.service.product.GetByName"
+
+	ids, err := p.productServer.GetExistIds(productIDs.GetProductId())
+	if err != nil {
+		slog.Error("failed to find product ids", sl.ErrWithOP(err, op))
+		return nil, status.Error(codes.Internal, "failed to find product ids")
+	}
+	return &servergrpc.ListProductIDs{ProductId: ids}, nil
 }
 
 func (p *ProductGRPCServer) UpdateById(

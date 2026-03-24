@@ -2,6 +2,7 @@ package use_cases
 
 import (
 	"context"
+	"errors"
 	"io"
 	"notification-service/lib/observability/app_metrics"
 	"notification-service/lib/sl"
@@ -88,16 +89,11 @@ func (n *NotifyService) SendNotify(stream grpc.ClientStreamingServer[pb.Notifica
 	const OP = "services.use_cases.notify.NotifyService.SendNotify"
 	log := slog.With("OP", OP)
 
-	var notifications []model.Notification
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			log.Info("stream close", sl.Err(err))
-			err := stream.SendAndClose(&emptypb.Empty{})
-			if err != nil {
-				log.Error("Error close stream", sl.Err(err))
-			}
-			break
+			return stream.SendAndClose(&emptypb.Empty{})
 		}
 		if err != nil {
 			log.Error("failed get response from stream", sl.Err(err))
@@ -110,19 +106,13 @@ func (n *NotifyService) SendNotify(stream grpc.ClientStreamingServer[pb.Notifica
 			CreatedAt:  resp.CreatedAt.AsTime(),
 			UserID:     resp.UserId,
 		}
-		notifications = append(notifications, notification)
-	}
-
-	for _, notification := range notifications {
 		n.mu.RLock()
 		clientWS, ok := n.clients[notification.UserID]
 		n.mu.RUnlock()
-
 		if !ok {
-			slog.Error("Websocket is already close")
+			slog.Error("no active websocket for user", slog.Int64("userID", notification.UserID))
 			continue
 		}
-
 		log.Info("Begin write notification in notifications")
 		select {
 		case clientWS.Cn <- notification:
@@ -131,7 +121,6 @@ func (n *NotifyService) SendNotify(stream grpc.ClientStreamingServer[pb.Notifica
 		}
 		log.Info("End write notification in notifications channel")
 	}
-	return nil
 }
 
 func (n *NotifyService) AddClient(client *model.ClientWS) {

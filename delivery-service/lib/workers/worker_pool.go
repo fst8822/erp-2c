@@ -6,6 +6,8 @@ import (
 	"delivery-service/lib/sl"
 	"delivery-service/model"
 	clientrgrpc "delivery-service/server_grpc/proto/v1/notify"
+	"errors"
+	"io"
 	"log/slog"
 	"sync"
 	"time"
@@ -200,33 +202,39 @@ func (w *WorkerPool) sendToNotification(ctx context.Context, ch <-chan model.Del
 
 	stream, err := w.notify.SendNotify(ctx, grpc.WaitForReady(true))
 	if err != nil {
-		slogger.Error("Failed get client grpc stream",
-			sl.ErrWithOP(err, op))
+		slogger.Error("Failed get grpc stream", sl.ErrWithOP(err, op))
 		return
 	}
-	//todo when stream is close, it send all message
-	for it := range ch {
-		notification := clientrgrpc.Notification{
-			DeliveryId: it.ID,
-			Status:     string(it.Status),
-			CreatedAt:  timestamppb.New(it.CreatedAt),
-			UserId:     it.UserID,
+	for {
+		select {
+		case <-ctx.Done():
+			slogger.Info("Context is cancelled")
+			return
+		case it, ok := <-ch:
+			if !ok {
+				if _, err := stream.CloseAndRecv(); err != nil && errors.Is(err, io.EOF) {
+					slogger.Error("failed to close stream", sl.Err(err))
+				}
+				return
+			}
+
+			notification := clientrgrpc.Notification{
+				DeliveryId: it.ID,
+				Status:     string(it.Status),
+				CreatedAt:  timestamppb.New(it.CreatedAt),
+				UserId:     it.UserID,
+			}
+
+			slog.Info("Start Send Notification")
+			if err := stream.Send(&notification); err != nil {
+				slogger.Error("failed to send notification",
+					slog.Int64("deliveryId", it.ID),
+					slog.String("status", string(it.Status)),
+					sl.Err(err))
+			} else {
+				slog.Info("Notification sent successfully", slog.Int64("deliveryId", it.ID))
+			}
 		}
-		slog.Info("Start Send Notification")
-		if err := stream.Send(&notification); err != nil {
-			slog.Error("failed to send notification",
-				slog.Int64("deliveryId", it.ID),
-				slog.String("status", string(it.Status)),
-				sl.ErrWithOP(err, op))
-		} else {
-			slog.Info("Notification sent successfully", slog.Int64("deliveryId", it.ID))
-		}
-	}
-	//todo when is close
-	_, err2 := stream.CloseAndRecv()
-	if err2 != nil {
-		slog.Error("failed Close And Recv notification stream",
-			sl.ErrWithOP(err2, op))
 	}
 }
 
