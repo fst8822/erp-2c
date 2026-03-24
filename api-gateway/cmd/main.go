@@ -6,6 +6,7 @@ import (
 	"api-gateway/lib/sl"
 	"api-gateway/server_grpc/interceptors_grpc"
 	deliverygrpc "api-gateway/server_grpc/proto/v1/delivery"
+	notifygrpc "api-gateway/server_grpc/proto/v1/notify"
 	productgrpc "api-gateway/server_grpc/proto/v1/product"
 	"api-gateway/service/use_cases"
 	"api-gateway/store"
@@ -70,17 +71,17 @@ func main() {
 
 	clientDeliveryGRPC := deliverygrpc.NewDeliveryServiceClient(conn)
 	clientProductGRPC := productgrpc.NewProductServiceClient(conn)
+	clientNotifyGRPC := notifygrpc.NewNotifyServiceClient(conn)
 
 	userRepository := pg.NewUserRepository(db.Pg)
 	userService := use_cases.NewUserService(userRepository)
 	authService := use_cases.NewAuthService(userService)
-	notifyService := use_cases.NewNotifyService()
 
 	r := controller.NewRouters(
 		authService,
 		clientDeliveryGRPC,
-		notifyService,
 		clientProductGRPC,
+		clientNotifyGRPC,
 		userService,
 	)
 	srv := &http.Server{
