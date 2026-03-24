@@ -4,6 +4,7 @@ import (
 	"api-gateway/lib/observability/app_metrics"
 	"api-gateway/security"
 	deliverygrpc "api-gateway/server_grpc/proto/v1/delivery"
+	notifygrpc "api-gateway/server_grpc/proto/v1/notify"
 	productgrpc "api-gateway/server_grpc/proto/v1/product"
 	"net/http"
 
@@ -16,8 +17,8 @@ import (
 func NewRouters(
 	authService authServiceInt,
 	deliveryClientGRPC deliverygrpc.DeliveryServiceClient,
-	notifyService notifyServiceInt,
 	productClientGRPC productgrpc.ProductServiceClient,
+	notifyClientGRPC notifygrpc.NotifyServiceClient,
 	userService userServiceInt,
 ) http.Handler {
 	router := chi.NewRouter()
@@ -33,7 +34,7 @@ func NewRouters(
 	userController := NewUserController(userService, validate)
 	productController := NewProductController(productClientGRPC, validate)
 	deliveryController := NewDeliveryController(deliveryClientGRPC, validate)
-	notifyController := NewNotifyController(notifyService)
+	notifyController := NewNotifyController(notifyClientGRPC)
 
 	router.Handle("/metrics", promhttp.Handler())
 	router.Route("/api/v1", func(r chi.Router) {
