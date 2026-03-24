@@ -11,6 +11,7 @@ type productRepoInt interface {
 	GetById(productId int64) (*model.ProductDB, error)
 	GetByName(productName string) (*model.ProductDB, error)
 	GetAll() ([]model.ProductDB, error)
+	GetExistIds(productIds []int64) ([]int64, error)
 	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
 	DeleteById(productId int64) error
 }
@@ -116,6 +117,10 @@ func (p *ProductService) GetAll() ([]model.ProductDomain, error) {
 		productsDomain = append(productsDomain, productDomain)
 	}
 	return productsDomain, nil
+}
+
+func (p *ProductService) GetExistIds(productIds []int64) ([]int64, error) {
+	return p.productRepo.GetExistIds(productIds)
 }
 
 func (p *ProductService) UpdateById(productId int64, productToUpdate model.ProductUpdate) error {

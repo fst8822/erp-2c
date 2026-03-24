@@ -19,6 +19,7 @@ type productServiceInt interface {
 	GetById(productId int64) (*model.ProductDomain, error)
 	GetByName(productName string) (*model.ProductDomain, error)
 	GetAll() ([]model.ProductDomain, error)
+	GetExistIds(productIds []int64) ([]int64, error)
 	UpdateById(productId int64, productToUpdate model.ProductUpdate) error
 	DeleteById(productId int64) error
 }
@@ -122,6 +123,10 @@ func (p *ProductGRPCServer) GetAll(
 		}
 	}
 	return nil
+}
+
+func (p *ProductGRPCServer) GetExistIds(productIds []int64) ([]int64, error) {
+	return p.productServer.GetExistIds(productIds)
 }
 
 func (p *ProductGRPCServer) UpdateById(

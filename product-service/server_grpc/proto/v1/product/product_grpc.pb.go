@@ -20,12 +20,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProductService_Save_FullMethodName       = "/ProductService/Save"
-	ProductService_GetById_FullMethodName    = "/ProductService/GetById"
-	ProductService_GetByName_FullMethodName  = "/ProductService/GetByName"
-	ProductService_GetAll_FullMethodName     = "/ProductService/GetAll"
-	ProductService_UpdateById_FullMethodName = "/ProductService/UpdateById"
-	ProductService_DeleteById_FullMethodName = "/ProductService/DeleteById"
+	ProductService_Save_FullMethodName        = "/ProductService/Save"
+	ProductService_GetById_FullMethodName     = "/ProductService/GetById"
+	ProductService_GetByName_FullMethodName   = "/ProductService/GetByName"
+	ProductService_GetAll_FullMethodName      = "/ProductService/GetAll"
+	ProductService_UpdateById_FullMethodName  = "/ProductService/UpdateById"
+	ProductService_DeleteById_FullMethodName  = "/ProductService/DeleteById"
+	ProductService_GetExistIds_FullMethodName = "/ProductService/GetExistIds"
 )
 
 // ProductServiceClient is the client API for ProductService service.
@@ -38,6 +39,7 @@ type ProductServiceClient interface {
 	GetAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ProductDomain], error)
 	UpdateById(ctx context.Context, in *UpdateProductByRequestID, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteById(ctx context.Context, in *RequestProductID, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetExistIds(ctx context.Context, in *ListProductIDs, opts ...grpc.CallOption) (*ListProductIDs, error)
 }
 
 type productServiceClient struct {
@@ -117,6 +119,16 @@ func (c *productServiceClient) DeleteById(ctx context.Context, in *RequestProduc
 	return out, nil
 }
 
+func (c *productServiceClient) GetExistIds(ctx context.Context, in *ListProductIDs, opts ...grpc.CallOption) (*ListProductIDs, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListProductIDs)
+	err := c.cc.Invoke(ctx, ProductService_GetExistIds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProductServiceServer is the server API for ProductService service.
 // All implementations must embed UnimplementedProductServiceServer
 // for forward compatibility.
@@ -127,6 +139,7 @@ type ProductServiceServer interface {
 	GetAll(*emptypb.Empty, grpc.ServerStreamingServer[ProductDomain]) error
 	UpdateById(context.Context, *UpdateProductByRequestID) (*emptypb.Empty, error)
 	DeleteById(context.Context, *RequestProductID) (*emptypb.Empty, error)
+	GetExistIds(context.Context, *ListProductIDs) (*ListProductIDs, error)
 	mustEmbedUnimplementedProductServiceServer()
 }
 
@@ -154,6 +167,9 @@ func (UnimplementedProductServiceServer) UpdateById(context.Context, *UpdateProd
 }
 func (UnimplementedProductServiceServer) DeleteById(context.Context, *RequestProductID) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteById not implemented")
+}
+func (UnimplementedProductServiceServer) GetExistIds(context.Context, *ListProductIDs) (*ListProductIDs, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetExistIds not implemented")
 }
 func (UnimplementedProductServiceServer) mustEmbedUnimplementedProductServiceServer() {}
 func (UnimplementedProductServiceServer) testEmbeddedByValue()                        {}
@@ -277,6 +293,24 @@ func _ProductService_DeleteById_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProductService_GetExistIds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListProductIDs)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProductServiceServer).GetExistIds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProductService_GetExistIds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProductServiceServer).GetExistIds(ctx, req.(*ListProductIDs))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProductService_ServiceDesc is the grpc.ServiceDesc for ProductService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -303,6 +337,10 @@ var ProductService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteById",
 			Handler:    _ProductService_DeleteById_Handler,
+		},
+		{
+			MethodName: "GetExistIds",
+			Handler:    _ProductService_GetExistIds_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
