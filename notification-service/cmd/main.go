@@ -4,7 +4,6 @@ import (
 	"notification-service/config"
 	"notification-service/lib/sl"
 	"notification-service/server_grpc/interceptors_grpc"
-	deliverygrpc "notification-service/server_grpc/proto/v1/delivery"
 	notifygrpc "notification-service/server_grpc/proto/v1/notify"
 	"notification-service/service/use_cases"
 
@@ -56,7 +55,6 @@ func main() {
 	notifygrpc.RegisterNotifyServiceServer(s, &use_cases.NotifyService{})
 
 	go func() {
-
 		slog.Info("notification-service: Start server grpc", slog.String("tcp", "localhost:50052"))
 		if err := s.Serve(les); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			slog.Error("Failed to grpc Serve", slog.Any("error", err.Error()))
@@ -72,9 +70,6 @@ func main() {
 		slog.Error("notification-service: Unable to connect grpc client", err)
 	}
 	defer conn.Close()
-
-	clientDeliveryGRPC := deliverygrpc.NewDeliveryServiceClient(conn)
-	_ = clientDeliveryGRPC
 
 	notifyService := use_cases.NewNotifyService()
 

@@ -93,7 +93,7 @@ func (n *NotifyService) SendNotify(stream grpc.ClientStreamingServer[pb.Notifica
 		resp, err := stream.Recv()
 		if err == io.EOF {
 			log.Info("stream close", sl.Err(err))
-			err := stream.SendAndClose(nil)
+			err := stream.SendAndClose(&emptypb.Empty{})
 			if err != nil {
 				log.Error("Error close stream", sl.Err(err))
 			}
@@ -120,7 +120,7 @@ func (n *NotifyService) SendNotify(stream grpc.ClientStreamingServer[pb.Notifica
 
 		if !ok {
 			slog.Error("Websocket is already close")
-			return nil
+			continue
 		}
 
 		log.Info("Begin write notification in notifications")
@@ -168,9 +168,14 @@ func (n *NotifyService) Shutdown() {
 }
 
 func (n *NotifyService) checkClientConn(cancel context.CancelFunc, client *model.ClientWS) {
+	const OP = "services.use_cases.notify.NotifyService.checkClientConn"
+
 	_, _, err := client.Conn.ReadMessage()
 	defer cancel()
 	if err != nil {
-		return
+		slog.Info("Connection WS is close",
+			slog.Int64("clientID", client.UserID),
+			slog.String("OP", OP),
+		)
 	}
 }
