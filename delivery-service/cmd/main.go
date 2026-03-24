@@ -100,7 +100,7 @@ func main() {
 
 	clientNotifyGRPC := clientNotifyrgrpc.NewNotifyServiceClient(conn)
 	clientProductGRPC := clientProductrgrpc.NewProductServiceClient(conn)
-	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, clientProductGRPC)
+	deliveryService := use_cases.NewDeliveryService(deliveryCache, clientProductGRPC)
 	deliveryGRPCServer := server_grpc.NewDeliveryGRPCServer(deliveryService)
 	deliverygrpc.RegisterDeliveryServiceServer(s, deliveryGRPCServer)
 
