@@ -398,6 +398,50 @@ func (x *RequestProductName) GetName() string {
 	return ""
 }
 
+type ListProductIDs struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductId     []int64                `protobuf:"varint,1,rep,packed,name=Product_id,json=ProductId,proto3" json:"Product_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProductIDs) Reset() {
+	*x = ListProductIDs{}
+	mi := &file_server_grpc_proto_v1_product_product_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProductIDs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProductIDs) ProtoMessage() {}
+
+func (x *ListProductIDs) ProtoReflect() protoreflect.Message {
+	mi := &file_server_grpc_proto_v1_product_product_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProductIDs.ProtoReflect.Descriptor instead.
+func (*ListProductIDs) Descriptor() ([]byte, []int) {
+	return file_server_grpc_proto_v1_product_product_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListProductIDs) GetProductId() []int64 {
+	if x != nil {
+		return x.ProductId
+	}
+	return nil
+}
+
 var File_server_grpc_proto_v1_product_product_proto protoreflect.FileDescriptor
 
 const file_server_grpc_proto_v1_product_product_proto_rawDesc = "" +
@@ -429,7 +473,10 @@ const file_server_grpc_proto_v1_product_product_proto_rawDesc = "" +
 	"\x10RequestProductID\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"(\n" +
 	"\x12RequestProductName\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name2\xc6\x02\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"/\n" +
+	"\x0eListProductIDs\x12\x1d\n" +
+	"\n" +
+	"Product_id\x18\x01 \x03(\x03R\tProductId2\xf7\x02\n" +
 	"\x0eProductService\x12&\n" +
 	"\x04Save\x12\x0e.ProductToSave\x1a\x0e.ProductDomain\x12,\n" +
 	"\aGetById\x12\x11.RequestProductID\x1a\x0e.ProductDomain\x120\n" +
@@ -438,7 +485,8 @@ const file_server_grpc_proto_v1_product_product_proto_rawDesc = "" +
 	"\n" +
 	"UpdateById\x12\x19.UpdateProductByRequestID\x1a\x16.google.protobuf.Empty\x127\n" +
 	"\n" +
-	"DeleteById\x12\x11.RequestProductID\x1a\x16.google.protobuf.EmptyB Z\x1eerp-2c/api-gateway/server_grpcb\x06proto3"
+	"DeleteById\x12\x11.RequestProductID\x1a\x16.google.protobuf.Empty\x12/\n" +
+	"\vGetExistIds\x12\x0f.ListProductIDs\x1a\x0f.ListProductIDsB)Z'erp-2c/notification-service/server_grpcb\x06proto3"
 
 var (
 	file_server_grpc_proto_v1_product_product_proto_rawDescOnce sync.Once
@@ -452,7 +500,7 @@ func file_server_grpc_proto_v1_product_product_proto_rawDescGZIP() []byte {
 	return file_server_grpc_proto_v1_product_product_proto_rawDescData
 }
 
-var file_server_grpc_proto_v1_product_product_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_server_grpc_proto_v1_product_product_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_server_grpc_proto_v1_product_product_proto_goTypes = []any{
 	(*ProductToSave)(nil),            // 0: ProductToSave
 	(*ProductUpdate)(nil),            // 1: ProductUpdate
@@ -460,24 +508,27 @@ var file_server_grpc_proto_v1_product_product_proto_goTypes = []any{
 	(*ProductDomain)(nil),            // 3: ProductDomain
 	(*RequestProductID)(nil),         // 4: RequestProductID
 	(*RequestProductName)(nil),       // 5: RequestProductName
-	(*emptypb.Empty)(nil),            // 6: google.protobuf.Empty
+	(*ListProductIDs)(nil),           // 6: ListProductIDs
+	(*emptypb.Empty)(nil),            // 7: google.protobuf.Empty
 }
 var file_server_grpc_proto_v1_product_product_proto_depIdxs = []int32{
 	1, // 0: UpdateProductByRequestID.productToUpdate:type_name -> ProductUpdate
 	0, // 1: ProductService.Save:input_type -> ProductToSave
 	4, // 2: ProductService.GetById:input_type -> RequestProductID
 	5, // 3: ProductService.GetByName:input_type -> RequestProductName
-	6, // 4: ProductService.GetAll:input_type -> google.protobuf.Empty
+	7, // 4: ProductService.GetAll:input_type -> google.protobuf.Empty
 	2, // 5: ProductService.UpdateById:input_type -> UpdateProductByRequestID
 	4, // 6: ProductService.DeleteById:input_type -> RequestProductID
-	3, // 7: ProductService.Save:output_type -> ProductDomain
-	3, // 8: ProductService.GetById:output_type -> ProductDomain
-	3, // 9: ProductService.GetByName:output_type -> ProductDomain
-	3, // 10: ProductService.GetAll:output_type -> ProductDomain
-	6, // 11: ProductService.UpdateById:output_type -> google.protobuf.Empty
-	6, // 12: ProductService.DeleteById:output_type -> google.protobuf.Empty
-	7, // [7:13] is the sub-list for method output_type
-	1, // [1:7] is the sub-list for method input_type
+	6, // 7: ProductService.GetExistIds:input_type -> ListProductIDs
+	3, // 8: ProductService.Save:output_type -> ProductDomain
+	3, // 9: ProductService.GetById:output_type -> ProductDomain
+	3, // 10: ProductService.GetByName:output_type -> ProductDomain
+	3, // 11: ProductService.GetAll:output_type -> ProductDomain
+	7, // 12: ProductService.UpdateById:output_type -> google.protobuf.Empty
+	7, // 13: ProductService.DeleteById:output_type -> google.protobuf.Empty
+	6, // 14: ProductService.GetExistIds:output_type -> ListProductIDs
+	8, // [8:15] is the sub-list for method output_type
+	1, // [1:8] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -494,7 +545,7 @@ func file_server_grpc_proto_v1_product_product_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_server_grpc_proto_v1_product_product_proto_rawDesc), len(file_server_grpc_proto_v1_product_product_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
