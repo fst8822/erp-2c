@@ -221,11 +221,12 @@ func (w *WorkerPool) sendToNotification(ctx context.Context, ch <-chan model.Del
 		} else {
 			slog.Info("Notification sent successfully", slog.Int64("deliveryId", it.ID))
 		}
-		_, err := stream.CloseAndRecv()
-		if err != nil {
-			slog.Error("failed Close And Recv notification stream",
-				sl.ErrWithOP(err, op))
-		}
+	}
+	//todo when is close
+	_, err2 := stream.CloseAndRecv()
+	if err2 != nil {
+		slog.Error("failed Close And Recv notification stream",
+			sl.ErrWithOP(err2, op))
 	}
 }
 

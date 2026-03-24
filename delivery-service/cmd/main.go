@@ -12,7 +12,8 @@ import (
 	"delivery-service/server_grpc"
 	"delivery-service/server_grpc/interceptors_grpc"
 	deliverygrpc "delivery-service/server_grpc/proto/v1/delivery"
-	clientrgrpc "delivery-service/server_grpc/proto/v1/notify"
+	clientNotifyrgrpc "delivery-service/server_grpc/proto/v1/notify"
+	clientProductrgrpc "delivery-service/server_grpc/proto/v1/product"
 	"delivery-service/service/use_cases"
 	"delivery-service/store/pg"
 	"errors"
@@ -67,9 +68,6 @@ func main() {
 
 	deliveryRepository := pg.NewDeliveryRepository(db.Pg)
 	deliveryCache := pg.NewDeliveryCacheCache(ctx, deliveryRepository, mapCache)
-	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, productRepository)
-
-	deliveryGRPCServer := server_grpc.NewDeliveryGRPCServer(deliveryService)
 
 	go app_metrics.StartMetricsSync(ctx, deliveryRepository)
 
@@ -83,7 +81,6 @@ func main() {
 		grpc.UnaryInterceptor(interceptors_grpc.AuthServerInterceptorUnary),
 		grpc.StreamInterceptor(interceptors_grpc.AuthServerInterceptorStream),
 	)
-	deliverygrpc.RegisterDeliveryServiceServer(s, deliveryGRPCServer)
 
 	go func() {
 		slog.Info("delivery-service: Start server grpc", slog.String("tcp", "localhost:50051"))
@@ -95,14 +92,17 @@ func main() {
 	conn, err := grpc.NewClient(
 		"localhost:50052",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		slog.Error("delivery-service: Connection to grpc server failed", err)
 	}
 	defer conn.Close()
 
-	clientNotifyGRPC := clientrgrpc.NewNotifyServiceClient(conn)
+	clientNotifyGRPC := clientNotifyrgrpc.NewNotifyServiceClient(conn)
+	clientProductGRPC := clientProductrgrpc.NewProductServiceClient(conn)
+	deliveryService := use_cases.NewDeliveryService(deliveryCache, deliveryRepository, clientProductGRPC)
+	deliveryGRPCServer := server_grpc.NewDeliveryGRPCServer(deliveryService)
+	deliverygrpc.RegisterDeliveryServiceServer(s, deliveryGRPCServer)
 
 	queue := collection.NewQueue(capacity)
 	workPoll := workers.NewWorkerPool(

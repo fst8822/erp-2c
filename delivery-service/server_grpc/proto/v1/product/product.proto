@@ -41,6 +41,10 @@
     string name = 1;
   }
 
+  message ListProductIDs {
+   repeated int64 Product_id = 1;
+  }
+
   service ProductService {
    rpc  Save(ProductToSave) returns (ProductDomain);
    rpc  GetById(RequestProductID) returns (ProductDomain);
@@ -48,4 +52,5 @@
    rpc  GetAll(google.protobuf.Empty) returns (stream ProductDomain);
    rpc  UpdateById(UpdateProductByRequestID) returns (google.protobuf.Empty);
    rpc  DeleteById(RequestProductID) returns (google.protobuf.Empty);
+   rpc  GetExistIds(ListProductIDs) returns(ListProductIDs);
   }
